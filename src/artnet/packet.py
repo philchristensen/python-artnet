@@ -38,7 +38,7 @@ class ArtNetPacket(object):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
 		subuni, net = lohi(self.universe)
 		len_lo, len_hi = lohi(512)
-		header = struct.pack('!8shBBBBBBBB', 
+		header = struct.pack('!8sHBBBBBBBB', 
 			HEADER, ARTNET_OUTPUT, proto_hi, proto_lo,
 			self.sequence, self.physical, subuni, net, len_hi, len_lo)
 		return header + ''.join([struct.pack('!B', c) for c in self.channels])
