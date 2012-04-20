@@ -1,14 +1,19 @@
 import struct, itertools
 
+HEADER = 'Art-Net\0'
+PROTOCOL_VERSION = 14
+ARTNET_OUTPUT = 0x5000
+
+def lohi(i):
+	low = i & 0x00FF
+	high = (i & 0xFF00) >> 8
+	return low, high
+
 sequencer = None
 def reset_sequence():
 	global sequencer
 	sequencer = itertools.cycle(xrange(255))
 reset_sequence()
-
-HEADER = 'Art-Net\0'
-PROTOCOL_VERSION = 14
-ARTNET_OUTPUT = 0x5000
 
 class ArtNetPacket(object):
 	def __init__(self, physical=0, universe=0):
@@ -19,27 +24,24 @@ class ArtNetPacket(object):
 	
 	def __setitem__(self, channel, value):
 		if not(isinstance(value, int)):
-			raise TypeError("Invalid ArtNet value: %r" % value)
+			raise TypeError("Invalid DMX value: %r" % value)
 		if(value < 0 or value > 255):
-			raise ValueError("Invalid ArtNet value: %r " % value)
+			raise ValueError("Invalid DMX value: %r " % value)
 		if(channel < 0 or channel > 511):
-			raise ValueError("Invalid ArtNet value: %r " % channel)
+			raise ValueError("Invalid DMX channel: %r " % channel)
 		self.channels[channel] = value
 	
 	def __getitem__(self, index):
 		return self.channels[index]
 	
 	def encode(self):
-		header = struct.pack('!8shhiih', 
-			HEADER, ARTNET_OUTPUT, PROTOCOL_VERSION,
-			self.sequence, self.physical, self.universe)
-		predicate = lambda x: x is not None
-		def _split(i):
-			if(i < 128):
-				return i, 0
-			else:
-				return 127, i - 128
-		return header + ''.join([struct.pack('bb', *_split(c)) for c in self.channels])
+		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
+		subuni, net = lohi(self.universe)
+		len_lo, len_hi = lohi(512)
+		header = struct.pack('!8shBBBBBBBB', 
+			HEADER, ARTNET_OUTPUT, proto_hi, proto_lo,
+			self.sequence, self.physical, subuni, net, len_hi, len_lo)
+		return header + ''.join([struct.pack('!B', c) for c in self.channels])
 
 if(__name__ == '__main__'):
 	import socket
