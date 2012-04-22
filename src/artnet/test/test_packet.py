@@ -18,8 +18,8 @@ TOD_REQUEST = ''.join([
 	"".join(["\x00"] * 7),   # Spare1-7 (Int8)
 	"\x00", # Net (Int8)
 	"\x00", # Command (Int8)
-	"\x00", # AddCount (Int8)
-	"\x00", # AddCount (Int8)
+	"\x01", # AddCount (Int8)
+	"\x01", ''.join(["\x00"] * 31), # Address[31] (Int8)
 ])
 
 BLACKOUT_PACKET = ''.join([
@@ -29,7 +29,7 @@ BLACKOUT_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x00", # SubUni, Net (Int8)
-	"\x02", "\x00", # LenHi, LenLo (Int8)
+	"\x00", "\x02", # LenHi, LenLo (Int8)
 	"".join(["\x00"] * 512)
 ])
 
@@ -40,7 +40,7 @@ U30_BLACKOUT_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x1e", # SubUni, Net (Int8)
-	"\x02", "\x00", # LenHi, LenLo (Int8)
+	"\x00", "\x02", # LenHi, LenLo (Int8)
 	"".join(["\x00"] * 512)
 ])
 
@@ -51,7 +51,7 @@ FIRST_FIXTURE_WHITE_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x00", # SubUni, Net (Int8)
-	"\x02", "\x00", # LenHi, LenLo (Int8)
+	"\x00", "\x02", # LenHi, LenLo (Int8)
 	"".join(["\xff"] * 3),
 	"".join(["\x00"] * 509)
 ])
