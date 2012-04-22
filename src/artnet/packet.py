@@ -41,9 +41,9 @@ class ArtNetPacket(object):
 	
 	def encode(self):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-		len_lo, len_hi = lohi(512)
 		
 		if(self.opcode == ARTNET_OUTPUT):
+			len_lo, len_hi = lohi(512)
 			header = struct.pack('!8sHBBBBHBB', 
 				HEADER, self.opcode, proto_hi, proto_lo,
 				self.sequence, self.physical, self.universe, len_lo, len_hi)
@@ -62,28 +62,30 @@ if(__name__ == '__main__'):
 	import socket
 	
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.0.98', 6454))
+	sock.bind(('192.168.1.99', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	p = ArtNetPacket(opcode=ARTNET_POLL)
-	l = sock.sendto(p.encode(), ('192.168.0.255', 6454))
+	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
 	
 	print 'sent %s bytes' % l	
 	
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.0.98', 6454))
+	sock.bind(('192.168.1.99', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	p = ArtNetPacket(opcode=ARTNET_TOD_REQUEST)
-	l = sock.sendto(p.encode(), ('192.168.0.255', 6454))
+	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
 	
 	print 'sent %s bytes' % l	
 	time.sleep(2)
 
 	# blackout
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.0.98', 6454))
+	sock.bind(('192.168.1.99', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 	p = ArtNetPacket()
-	l = sock.sendto(p.encode(), ('192.168.0.255', 6454))
+	# for i in range(512):
+	# 	p[i] = 255
+	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
 	
 	print 'sent %s bytes' % l
 	sock.close()

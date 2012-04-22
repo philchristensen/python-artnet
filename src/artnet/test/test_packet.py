@@ -44,7 +44,7 @@ U30_BLACKOUT_PACKET = ''.join([
 	"".join(["\x00"] * 512)
 ])
 
-FIRST_FIXTURE_WHITE_PACKET = ''.join([
+WHITEOUT_PACKET = ''.join([
 	"Art-Net\x00",  # ID[8] (Int8)
 	"\x00P",        # OpCode (Int16)
 	"\x00", "\x0e", # ProtVerHi, ProtVerLo (Int8)
@@ -52,8 +52,7 @@ FIRST_FIXTURE_WHITE_PACKET = ''.join([
 	"\x00",         # Physical (Int8)
 	"\x00", "\x00", # SubUni, Net (Int8)
 	"\x00", "\x02", # LenHi, LenLo (Int8)
-	"".join(["\xff"] * 3),
-	"".join(["\x00"] * 509)
+	"".join(["\xff"] * 512)
 ])
 
 class TestPacket(unittest.TestCase):
@@ -100,14 +99,13 @@ class TestPacket(unittest.TestCase):
 		self.assertEqual(len(x), len(BLACKOUT_PACKET))
 		self.assertEqual(x, BLACKOUT_PACKET)
 	
-	def test_first_fixture(self):
+	def test_whiteout(self):
 		p = packet.ArtNetPacket()
-		p[0] = 255
-		p[1] = 255
-		p[2] = 255
+		for i in range(512):
+			p[i] = 255
 		x = p.encode()
-		self.assertEqual(len(x), len(FIRST_FIXTURE_WHITE_PACKET))
-		self.assertEqual(x, FIRST_FIXTURE_WHITE_PACKET)
+		self.assertEqual(len(x), len(WHITEOUT_PACKET))
+		self.assertEqual(x, WHITEOUT_PACKET)
 	
 	def test_universe_30(self):
 		p = packet.ArtNetPacket(universe=30)
