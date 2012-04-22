@@ -46,7 +46,7 @@ class ArtNetPacket(object):
 		if(self.opcode == ARTNET_OUTPUT):
 			header = struct.pack('!8sHBBBBHBB', 
 				HEADER, self.opcode, proto_hi, proto_lo,
-				self.sequence, self.physical, self.universe, 0, 0)
+				self.sequence, self.physical, self.universe, len_lo, len_hi)
 			return header + ''.join([struct.pack('!B', c) for c in self.channels])
 		elif(self.opcode == ARTNET_POLL):
 			return struct.pack('!8sHBBBB', HEADER, self.opcode, proto_hi, proto_lo, 0x02, 0)
@@ -68,8 +68,7 @@ if(__name__ == '__main__'):
 	l = sock.sendto(p.encode(), ('192.168.0.255', 6454))
 	
 	print 'sent %s bytes' % l	
-	time.sleep(2)
-
+	
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	sock.bind(('192.168.0.98', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -87,3 +86,4 @@ if(__name__ == '__main__'):
 	l = sock.sendto(p.encode(), ('192.168.0.255', 6454))
 	
 	print 'sent %s bytes' % l
+	sock.close()
