@@ -60,7 +60,7 @@ class TestPacket(unittest.TestCase):
 		packet.reset_sequence()
 	
 	def test_sequence(self):
-		p = packet.ArtNetPacket()
+		p = packet.DmxPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(BLACKOUT_PACKET))
 		self.assertEqual(x, BLACKOUT_PACKET)
@@ -68,7 +68,7 @@ class TestPacket(unittest.TestCase):
 		b = copy.copy(BLACKOUT_PACKET)
 		b = b[:12] + '\x01' + b[13:]
 		
-		p = packet.ArtNetPacket()
+		p = packet.DmxPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(b))
 		self.assertEqual(x, b)
@@ -76,31 +76,31 @@ class TestPacket(unittest.TestCase):
 		b = copy.copy(BLACKOUT_PACKET)
 		b = b[:12] + '\x02' + b[13:]
 		
-		p = packet.ArtNetPacket()
+		p = packet.DmxPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(b))
 		self.assertEqual(x, b)
 	
 	def test_poll(self):
-		p = packet.ArtNetPacket(opcode=packet.ARTNET_POLL)
+		p = packet.PollPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(POLL_PACKET))
 		self.assertEqual(x, POLL_PACKET)
 	
-	def test_tof_request(self):
-		p = packet.ArtNetPacket(opcode=packet.ARTNET_TOD_REQUEST)
+	def test_tod_request(self):
+		p = packet.TodRequestPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(TOD_REQUEST))
 		self.assertEqual(x, TOD_REQUEST)
 	
 	def test_blackout(self):
-		p = packet.ArtNetPacket()
+		p = packet.DmxPacket()
 		x = p.encode()
 		self.assertEqual(len(x), len(BLACKOUT_PACKET))
 		self.assertEqual(x, BLACKOUT_PACKET)
 	
 	def test_whiteout(self):
-		p = packet.ArtNetPacket()
+		p = packet.DmxPacket()
 		for i in range(512):
 			p[i] = 255
 		x = p.encode()
@@ -108,7 +108,7 @@ class TestPacket(unittest.TestCase):
 		self.assertEqual(x, WHITEOUT_PACKET)
 	
 	def test_universe_30(self):
-		p = packet.ArtNetPacket(universe=30)
+		p = packet.DmxPacket(universe=30)
 		x = p.encode()
 		self.assertEqual(len(x), len(U30_BLACKOUT_PACKET))
 		self.assertEqual(x, U30_BLACKOUT_PACKET)

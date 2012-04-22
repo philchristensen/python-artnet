@@ -20,12 +20,19 @@ def reset_sequence():
 reset_sequence()
 
 class ArtNetPacket(object):
-	def __init__(self, opcode=ARTNET_OUTPUT, physical=0, universe=0):
+	def __init__(self, opcode, physical=0, universe=0):
 		self.sequence = sequencer.next()
 		self.physical = physical
 		self.universe = universe
-		self.channels = [0] * 512
 		self.opcode = opcode
+	
+	def encode(self):
+		raise NotImplementedError('encode')
+
+class DmxPacket(ArtNetPacket):
+	def __init__(self, physical=0, universe=0):
+		super(DmxPacket, self).__init__(ARTNET_OUTPUT, physical, universe)
+		self.channels = [0] * 512
 	
 	def __setitem__(self, channel, value):
 		if not(isinstance(value, int)):
@@ -41,51 +48,62 @@ class ArtNetPacket(object):
 	
 	def encode(self):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-		
-		if(self.opcode == ARTNET_OUTPUT):
-			len_lo, len_hi = lohi(512)
-			header = struct.pack('!8sHBBBBHBB', 
-				HEADER, self.opcode, proto_hi, proto_lo,
-				self.sequence, self.physical, self.universe, len_lo, len_hi)
-			return header + ''.join([struct.pack('!B', c) for c in self.channels])
-		elif(self.opcode == ARTNET_POLL):
-			return struct.pack('!8sHBBBB', HEADER, self.opcode, proto_hi, proto_lo, 0x02, 0)
-		elif(self.opcode == ARTNET_TOD_REQUEST):
-			return ''.join([
-				struct.pack('!8sHBB', HEADER, self.opcode, proto_hi, proto_lo),
-				''.join([struct.pack('!B', 0) for x in range(7)]),
-				''.join([struct.pack('!B', x) for x in [0, 0, 0, 0, 1, 1]]),
-				''.join([struct.pack('!B', 0) for x in range(31)])
-			])
+		len_lo, len_hi = lohi(512)
+		header = struct.pack('!8sHBBBBHBB', 
+			HEADER, self.opcode, proto_hi, proto_lo,
+			self.sequence, self.physical, self.universe, len_lo, len_hi)
+		return header + ''.join([struct.pack('!B', c) for c in self.channels])
+
+class PollPacket(ArtNetPacket):
+	def __init__(self, physical=0, universe=0):
+		super(PollPacket, self).__init__(ARTNET_POLL, physical, universe)
+	
+	def encode(self):
+		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
+		return struct.pack('!8sHBBBB', HEADER, self.opcode, proto_hi, proto_lo, 0x02, 0)
+
+class TodRequestPacket(ArtNetPacket):
+	def __init__(self, physical=0, universe=0):
+		super(TodRequestPacket, self).__init__(ARTNET_TOD_REQUEST, physical, universe)
+	
+	def encode(self):
+		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
+		return ''.join([
+			struct.pack('!8sHBB', HEADER, self.opcode, proto_hi, proto_lo),
+			''.join([struct.pack('!B', 0) for x in range(7)]),
+			''.join([struct.pack('!B', x) for x in [0, 0, 0, 0, 1, 1]]),
+			''.join([struct.pack('!B', 0) for x in range(31)])
+		])
 
 if(__name__ == '__main__'):
 	import socket
 	
-	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.1.99', 6454))
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	p = ArtNetPacket(opcode=ARTNET_POLL)
+	def getsock():
+		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		sock.bind(('192.168.1.99', 6454))
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		return sock
+	
+	sock = getsock()
+	
+	p = PollPacket()
 	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
+	print 'sent %s bytes' % l
 	
-	print 'sent %s bytes' % l	
-	
-	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.1.99', 6454))
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	p = ArtNetPacket(opcode=ARTNET_TOD_REQUEST)
+	p = TodRequestPacket()
 	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
+	print 'sent %s bytes' % l
 	
-	print 'sent %s bytes' % l	
+	sock.close()
+	
 	time.sleep(2)
 
 	# blackout
-	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('192.168.1.99', 6454))
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	p = ArtNetPacket()
+	sock = getsock()
+	p = DmxPacket()
 	# for i in range(512):
 	# 	p[i] = 255
 	l = sock.sendto(p.encode(), ('192.168.1.255', 6454))
-	
 	print 'sent %s bytes' % l
+	
 	sock.close()
