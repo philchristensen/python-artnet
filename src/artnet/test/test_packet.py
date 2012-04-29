@@ -29,7 +29,7 @@ BLACKOUT_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x00", # SubUni, Net (Int8)
-	"\x00", "\x02", # LenHi, LenLo (Int8)
+	"\x02", "\x00", # LenHi, LenLo (Int8)
 	"".join(["\x00"] * 512)
 ])
 
@@ -40,7 +40,7 @@ U30_BLACKOUT_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x1e", # SubUni, Net (Int8)
-	"\x00", "\x02", # LenHi, LenLo (Int8)
+	"\x02", "\x00", # LenHi, LenLo (Int8)
 	"".join(["\x00"] * 512)
 ])
 
@@ -51,36 +51,11 @@ WHITEOUT_PACKET = ''.join([
 	"\x00",         # Sequence (Int8)
 	"\x00",         # Physical (Int8)
 	"\x00", "\x00", # SubUni, Net (Int8)
-	"\x00", "\x02", # LenHi, LenLo (Int8)
+	"\x02", "\x00", # LenHi, LenLo (Int8)
 	"".join(["\xff"] * 512)
 ])
 
 class TestPacket(unittest.TestCase):
-	def tearDown(self):
-		packet.reset_sequence()
-	
-	def test_sequence(self):
-		p = packet.DmxPacket()
-		x = p.encode()
-		self.assertEqual(len(x), len(BLACKOUT_PACKET))
-		self.assertEqual(x, BLACKOUT_PACKET)
-		
-		b = copy.copy(BLACKOUT_PACKET)
-		b = b[:12] + '\x01' + b[13:]
-		
-		p = packet.DmxPacket()
-		x = p.encode()
-		self.assertEqual(len(x), len(b))
-		self.assertEqual(x, b)
-		
-		b = copy.copy(BLACKOUT_PACKET)
-		b = b[:12] + '\x02' + b[13:]
-		
-		p = packet.DmxPacket()
-		x = p.encode()
-		self.assertEqual(len(x), len(b))
-		self.assertEqual(x, b)
-	
 	def test_poll(self):
 		p = packet.PollPacket()
 		x = p.encode()

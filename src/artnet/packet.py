@@ -12,17 +12,11 @@ def lohi(i):
 	high = (i & 0xFF00) >> 8
 	return low, high
 
-sequencer = None
-def reset_sequence():
-	global sequencer
-	sequencer = itertools.cycle(xrange(255))
-reset_sequence()
-
 class ArtNetPacket(object):
 	opcode = None
 	
 	def __init__(self, source=None, physical=0, universe=0):
-		self.sequence = 0 #sequencer.next()
+		self.sequence = 0
 		self.physical = physical
 		self.universe = universe
 		self.source = source
