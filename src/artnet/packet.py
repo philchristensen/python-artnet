@@ -22,7 +22,7 @@ class ArtNetPacket(object):
 	opcode = None
 	
 	def __init__(self, source=None, physical=0, universe=0):
-		self.sequence = sequencer.next()
+		self.sequence = 0 #sequencer.next()
 		self.physical = physical
 		self.universe = universe
 		self.source = source
@@ -55,8 +55,9 @@ class ArtNetPacket(object):
 class DmxPacket(ArtNetPacket):
 	opcode = 0x0050
 	
-	def __init__(self, **kwargs):
+	def __init__(self, sequence=0, **kwargs):
 		super(DmxPacket, self).__init__(**kwargs)
+		self.sequence = sequence
 		self.channels = [0] * 512
 	
 	def __setitem__(self, channel, value):
@@ -246,6 +247,13 @@ if(__name__ == '__main__'):
 		return sock
 	
 	sock = getsock()
-	l = listener.Listener(sock)
-	l.run()
 	
+	for i in range(256):
+		r = DmxPacket()
+		r[505] = i;
+		r[511] = 255;
+		r[498] = i;
+		r[504] = 255;
+		sock.sendto(r.encode(), ('192.168.1.88', ARTNET_PORT))
+		time.sleep(0.01)
+
