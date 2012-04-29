@@ -76,7 +76,7 @@ class DmxPacket(ArtNetPacket):
 		len_lo, len_hi = lohi(512)
 		header = struct.pack('!8sHBBBBHBB', 
 			HEADER, self.opcode, proto_hi, proto_lo,
-			self.sequence, self.physical, self.universe, len_lo, len_hi)
+			self.sequence, self.physical, self.universe, len_hi, len_lo)
 		return header + ''.join([struct.pack('!B', c) for c in self.channels])
 	
 	@classmethod
