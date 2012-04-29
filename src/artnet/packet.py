@@ -237,23 +237,3 @@ class TodRequestPacket(ArtNetPacket):
 		])
 
 
-if(__name__ == '__main__'):
-	import socket
-	
-	def getsock():
-		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		sock.bind(('', 6454))
-		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		return sock
-	
-	sock = getsock()
-	
-	for i in range(256):
-		r = DmxPacket()
-		r[505] = i;
-		r[511] = 255;
-		r[498] = i;
-		r[504] = 255;
-		sock.sendto(r.encode(), ('192.168.1.88', ARTNET_PORT))
-		time.sleep(0.01)
-

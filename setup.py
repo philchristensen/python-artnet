@@ -16,6 +16,11 @@ setup(
 		'setuptools.file_finders'	: [
 			'git = setuptools_git:gitlsfiles',
 		],
+		'console_scripts': [
+			'artnet_listener = artnet.listener:main',
+			'artnet_blackout = artnet.scripts.blackout:main',
+			'artnet_halfup = artnet.scripts.halfup:main',
+		]
 	},
 	
 	install_requires = open('requirements.txt', 'rU')
