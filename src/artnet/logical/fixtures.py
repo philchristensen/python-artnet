@@ -3,11 +3,27 @@ class FixtureGroup(object):
 
 class Fixture(object):
 	address = 1
+	controls = []
+	
+	def getState(self):
+		channels = [None] * 512
+		for control in self.controls:
+			for offset, value in control.getLevels():
+				if(value is None):
+					continue
+				channels[address + offset] = value
+		return (address, channels)
+	
+	def addControl(control):
+		pass
 
 class RGBControl(object):
 	red_offset = 0
 	green_offset = 1
 	blue_offset = 2
+	red_level = 0
+	green_level = 0
+	blue_level = 0
 	
 	def setColor(self, hex):
 		pass
@@ -16,6 +32,13 @@ class RGBControl(object):
 		self.red_offset = r
 		self.green_offset = g
 		self.blue_offset = b
+	
+	def getLevels(self):
+		rgb = [None] * 512
+		rgb[self.red_offset] = self.red_level
+		rgb[self.green_offset] = self.green_level
+		rgb[self.blue_offset] = self.blue_level
+		return rgb
 
 class XYControl(object):
 	has_fine_control = False
@@ -23,6 +46,10 @@ class XYControl(object):
 	xfine_offset = None
 	y_offset = 1
 	xfine_offset = None
+	x_level = 0
+	xfine_level = 0
+	y_level = 0
+	xfine_level = 0
 	
 	def setPosition(self, x, y):
 		pass
@@ -34,6 +61,15 @@ class XYControl(object):
 			self.yfine_offset = yfine
 		self.x_offset = x
 		self.y_offset = y
+	
+	def getLevels(self):
+		xy = [None] * 512
+		xy[self.x_offset] = self.x_level
+		xy[self.y_offset] = self.y_level
+		if(self.has_fine_control):
+			xy[self.xfine_offset] = self.xfine_level
+			xy[self.yfine_offset] = self.yfine_level
+		return xy
 
 class StrobeControl(object):
 	strobe_offset = 4
