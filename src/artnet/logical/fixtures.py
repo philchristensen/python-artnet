@@ -1,35 +1,61 @@
-class Fixture(object):
-	def __init__(self, address, count):
-		self.address = address
-		self.count = count
-		self.channels = []
-		self.rgb = ()
-		
-		for i in range(count):
-			self.channels[i] = Channel()
-	
-	def __setitem__(self, channel, value):
-		if not(isinstance(value, int)):
-			raise TypeError("Invalid DMX value: %r" % value)
-		if(value < 0 or value > 255):
-			raise ValueError("Invalid DMX value: %r " % value)
-		if(channel < 0 or channel > self.count):
-			raise ValueError("Invalid DMX channel: %r " % channel)
-		self.channels[channel].value = value
-	
-	def __getitem__(self, index):
-		return self.channels[index]
-	
-	def setRGBChannel(r=0, g=1, b=2):
-		self.rgb = (r, g, b)
-	
-	def setColor(r, g, b):
-		if not(rgb):
-			raise RuntimeError("No RGB channels defined for this fixture.")
-		self[self.rgb[0]] = r
-		self[self.rgb[1]] = g
-		self[self.rgb[2]] = b
+class FixtureGroup(object):
+	fixtures = []
 
-class Channel(object):
-	def __init__(self, level=0):
-		self.level = level
+class Fixture(object):
+	address = 1
+
+class RGBControl(object):
+	red_offset = 0
+	green_offset = 1
+	blue_offset = 2
+	
+	def setColor(self, hex):
+		pass
+	
+	def configureRGBOffsets(self, r, g, b):
+		self.red_offset = r
+		self.green_offset = g
+		self.blue_offset = b
+
+class XYControl(object):
+	has_fine_control = False
+	x_offset = 0
+	xfine_offset = None
+	y_offset = 1
+	xfine_offset = None
+	
+	def setPosition(self, x, y):
+		pass
+	
+	def configureXYOffsets(self, x, y, xfine=None, yfine=None):
+		self.has_fine_control = (xfine is None and yfine is None)
+		if(self.has_fine_control):
+			self.xfine_offset = xfine
+			self.yfine_offset = yfine
+		self.x_offset = x
+		self.y_offset = y
+
+class StrobeControl(object):
+	strobe_offset = 4
+	
+	def setStrobe(self, speed):
+		pass
+
+class ProgramControl(object):
+	program_offset = 5
+	
+	def setProgram(self, program):
+		pass
+
+class IntensityControl(object):
+	intensity_offset = 6
+	intensityfine_offset = None
+
+#example code
+fixture.setColor('#fff')
+fixture.setPosition(0.5, 0.2)
+fixture.setIntensity(0.9)
+fixture.strobeSpeed(10) #ms?
+fixture[0].setColor('#f00') # subfixtures
+fixture.setMacro('short-fade')
+fxiture.programSpeed(10) #ms?
