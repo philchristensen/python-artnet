@@ -1,4 +1,4 @@
-import fcntl, socket, struct, itertools, time
+import socket, struct, itertools, time
 
 from artnet import listener
 
