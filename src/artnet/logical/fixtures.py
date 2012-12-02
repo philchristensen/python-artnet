@@ -15,7 +15,7 @@ class Fixture(object):
 		return (address, channels)
 	
 	def addControl(control):
-		pass
+		self.controls.append(control)
 
 class RGBControl(object):
 	red_offset = 0
@@ -33,7 +33,7 @@ class RGBControl(object):
 		self.green_offset = g
 		self.blue_offset = b
 	
-	def getLevels(self):
+	def getState(self):
 		rgb = [None] * 512
 		rgb[self.red_offset] = self.red_level
 		rgb[self.green_offset] = self.green_level
@@ -62,7 +62,7 @@ class XYControl(object):
 		self.x_offset = x
 		self.y_offset = y
 	
-	def getLevels(self):
+	def getState(self):
 		xy = [None] * 512
 		xy[self.x_offset] = self.x_level
 		xy[self.y_offset] = self.y_level
