@@ -73,13 +73,30 @@ class XYControl(object):
 
 class StrobeControl(object):
 	strobe_offset = 4
+	strobe_value = 0
 	
-	def setStrobe(self, speed):
-		pass
+	def configureStrobeOffset(self, strobe):
+		self.strobe_offset = strobe
+	
+	def setStrobe(self, value):
+		self.strobe_value = value
+
+	def getState(self):
+		return [
+			(self.strobe_offset, self.strobe_value)
+		]
 
 class ProgramControl(object):
 	program_offset = 5
+	program_speed_offset = 4
+	program_macros = dict()
 	
+	def setMacro(self, label, value, speed):
+		self.program_macros[label] = (value, speed)
+	
+	def configureProgramOffset(self, program):
+		self.program_offset = program
+
 	def setProgram(self, program):
 		pass
 
@@ -94,4 +111,4 @@ fixture.setIntensity(0.9)
 fixture.strobeSpeed(10) #ms?
 fixture[0].setColor('#f00') # subfixtures
 fixture.setMacro('short-fade')
-fxiture.programSpeed(10) #ms?
+
