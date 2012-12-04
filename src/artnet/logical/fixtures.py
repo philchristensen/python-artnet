@@ -1,21 +1,19 @@
+def load(address, fixturedef):
+	f = Fixture(address)
+	return f
+
 class FixtureGroup(object):
 	fixtures = []
 
 class Fixture(object):
 	address = 1
-	controls = []
+	controls = dict()
 	
 	def getState(self):
-		channels = [None] * 512
-		for control in self.controls:
-			for offset, value in control.getLevels():
-				if(value is None):
-					continue
-				channels[address + offset] = value
-		return (address, channels)
+		return [x for c in self.controls.values() for x in c.getState()]
 	
-	def addControl(control):
-		pass
+	def addControl(label, control):
+		self.controls[label] = control
 
 class RGBControl(object):
 	red_offset = 0
@@ -33,12 +31,12 @@ class RGBControl(object):
 		self.green_offset = g
 		self.blue_offset = b
 	
-	def getLevels(self):
-		rgb = [None] * 512
-		rgb[self.red_offset] = self.red_level
-		rgb[self.green_offset] = self.green_level
-		rgb[self.blue_offset] = self.blue_level
-		return rgb
+	def getState(self):
+		return [
+			(self.red_offset, self.red_level),
+			(self.green_offset, self.green_level),
+			(self.blue_offset, self.blue_level)
+		]
 
 class XYControl(object):
 	has_fine_control = False
@@ -62,62 +60,66 @@ class XYControl(object):
 		self.x_offset = x
 		self.y_offset = y
 	
-	def getLevels(self):
-		xy = [None] * 512
-		xy[self.x_offset] = self.x_level
-		xy[self.y_offset] = self.y_level
+	def getState(self):
+		xy = [
+			(self.x_offset, self.x_level),
+			(self.y_offset, self.y_level)
+		]
 		if(self.has_fine_control):
-			xy[self.xfine_offset] = self.xfine_level
-			xy[self.yfine_offset] = self.yfine_level
+			xy.append((self.xfine_offset, self.xfine_level))
+			xy.append((self.yfine_offset, self.yfine_level))
 		return xy
 
 class StrobeControl(object):
 	strobe_offset = 4
+	strobe_value = 0
 	
-	def setStrobe(self, speed):
-		pass
+	def configureStrobeOffset(self, strobe):
+		self.strobe_offset = strobe
+	
+	def setStrobe(self, value):
+		self.strobe_value = value
+	
+	def getState(self):
+		return [
+			(self.strobe_offset, self.strobe_value)
+		]
 
 class ProgramControl(object):
 	program_offset = 5
+	program_speed_offset = 4
+	program_macros = dict()
+	program_value = 5
+	program_speed_value = 4
+	
+	def setMacro(self, label, value, speed):
+		self.program_macros[label] = (value, speed)
+	
+	def configureProgramOffset(self, program):
+		self.program_offset = program
 	
 	def setProgram(self, program):
 		pass
+	
+	def getState(self):
+		return [
+			(self.program_offset, self.program_value)
+			(self.program_speed_offset, self.program_speed_value)
+		]
 
 class IntensityControl(object):
 	intensity_offset = 6
 	intensityfine_offset = None
+	intensity_value = 0
+	intensityfine_value = 0
+	
+	def getState(self):
+		fine = []
+		if(intensityfine_offset is not None):
+			fine = [
+				(self.intensityfine_offset, self.intensityfine_value)
+			]
+		return [
+			(self.intensity_offset, self.intensity_value)
+		]
 
-#example config
-{
-	"name": "ADJ MegaBar RGB50",
-	"rgb_offsets" : {
-		"red": 0,
-		"blue": 1,
-		"green": 2,
-	},
-	"program_channel": {
-		"offset": 3,
-		"type": "color",
-		"macro": {
-			"white": 255,
-		}
-	},
-	"strobe_offset": 4,
-	"program_channel": {
-		"offset": 5,
-		"type": "program",
-		"macro": {
-			"slow-fade": 127,
-		}
-	},
-	"intesity_offset": 6
-}
-
-#example code
-fixture.setColor('#fff')
-fixture.setPosition(0.5, 0.2)
-fixture.setIntensity(0.9)
-fixture.strobeSpeed(10) #ms?
-fixture[0].setColor('#f00') # subfixtures
-fixture.setMacro('short-fade')
-fixture.programSpeed(10) #ms?
