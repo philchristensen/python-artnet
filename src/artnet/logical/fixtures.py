@@ -87,6 +87,32 @@ class IntensityControl(object):
 	intensity_offset = 6
 	intensityfine_offset = None
 
+#example config
+{
+	"name": "ADJ MegaBar RGB50",
+	"rgb_offsets" : {
+		"red": 0,
+		"blue": 1,
+		"green": 2,
+	},
+	"program_channel": {
+		"offset": 3,
+		"type": "color",
+		"macro": {
+			"white": 255,
+		}
+	},
+	"strobe_offset": 4,
+	"program_channel": {
+		"offset": 5,
+		"type": "program",
+		"macro": {
+			"slow-fade": 127,
+		}
+	},
+	"intesity_offset": 6
+}
+
 #example code
 fixture.setColor('#fff')
 fixture.setPosition(0.5, 0.2)
@@ -94,4 +120,4 @@ fixture.setIntensity(0.9)
 fixture.strobeSpeed(10) #ms?
 fixture[0].setColor('#f00') # subfixtures
 fixture.setMacro('short-fade')
-fxiture.programSpeed(10) #ms?
+fixture.programSpeed(10) #ms?
