@@ -56,11 +56,11 @@ class DmxPacket(ArtNetPacket):
 	
 	def __setitem__(self, channel, value):
 		if not(isinstance(value, int)):
-			raise TypeError("Invalid DMX value: %r" % value)
+			raise TypeError("Invalid DMX value: %r" % [value])
 		if(value < 0 or value > 255):
-			raise ValueError("Invalid DMX value: %r " % value)
+			raise ValueError("Invalid DMX value: %r " % [value])
 		if(channel < 0 or channel > 511):
-			raise ValueError("Invalid DMX channel: %r " % channel)
+			raise ValueError("Invalid DMX channel: %r " % [channel])
 		self.channels[channel] = value
 	
 	def __getitem__(self, index):
@@ -72,7 +72,7 @@ class DmxPacket(ArtNetPacket):
 		header = struct.pack('!8sHBBBBHBB', 
 			HEADER, self.opcode, proto_hi, proto_lo,
 			self.sequence, self.physical, self.universe, len_hi, len_lo)
-		return header + ''.join([struct.pack('!B', c) for c in self.channels])
+		return header + ''.join([0 if c is None else struct.pack('!B', c) for c in self.channels])
 	
 	@classmethod
 	def decode(cls, address, data):

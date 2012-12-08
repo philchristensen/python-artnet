@@ -1,37 +1,44 @@
 import sys, socket
 
 import artnet
+from artnet.logical import fixtures
 
 def main():
 	if(len(sys.argv) < 2):
-		print "\nUsage:\n\ttest_fixture [address]\n"
-		sys.exit(1)
+		sys.argv.append('<broadcast>')
 	
-	f = fixtures.create(499, {
+	f = fixtures.Fixture(17)
+	f.configure({
 		"name": "ADJ MegaBar RGB50",
 		"rgb_offsets" : {
 			"red": 0,
 			"blue": 1,
 			"green": 2,
 		},
-		"program_channel": {
-			"offset": 3,
-			"type": "color",
-			"macro": {
-				"white": 255,
+		"program_channels": [
+			{
+				"offset": 3,
+				"type": "color",
+				"macros": {
+					"white": 255,
+				}
+			},
+			{
+				"offset": 5,
+				"type": "program",
+				"macro": {
+					"slow-fade": {
+						"value": 127,
+						"speed": 127,
+					},
+				}
 			}
-		},
+		],
 		"strobe_offset": 4,
-		"program_channel": {
-			"offset": 5,
-			"type": "program",
-			"macro": {
-				"slow-fade": 127,
-			}
-		},
-		"intesity_offset": 6
+		"intensity_offset": 6
 	})
-	f.setColor('#f00')
+	f.setColor('#ff0000')
+	f.setIntensity(255)
 	
 	# #example code
 	# f.setColor('#fff')
@@ -41,7 +48,13 @@ def main():
 	# f[0].setColor('#f00') # subfixtures
 	# f.setMacro('short-fade')
 	
-	artnet.send_dmx(sys.argv[1], f.getState())
+	channels = [0] * 512
+	for offset, value in f.getState():
+		if(offset is None):
+			continue
+		channels[(f.address - 1) + offset] = value
+	
+	artnet.send_dmx(sys.argv[1], channels)
 
 if(__name__ == '__main__'):
 	main()
