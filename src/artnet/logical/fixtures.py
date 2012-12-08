@@ -14,6 +14,14 @@ class Fixture(object):
 		self.address = address
 		self.controls = dict()
 	
+	def __getattr__(self, fixture_func):
+		for label, ctrls in self.controls.items():
+			for ctrl in ctrls:
+				func = getattr(ctrl, fixture_func, None)
+				if(callable(func)):
+					return getattr(ctrl, fixture_func)
+		raise AttributeError(fixture_func)
+	
 	def configure(self, fixturedef):
 		for klass in available_controls:
 			if klass is ProgramControl:
@@ -26,19 +34,20 @@ class Fixture(object):
 				label = ctrl.configure(fixturedef)
 				self.addControl(label, ctrl)
 	
-	def getState(self):
-		return [x for clist in self.controls.values() for c in clist for x in c.getState()]
-	
 	def addControl(self, label, control):
 		self.controls.setdefault(label, []).append(control)
 	
-	def setColor(self, hexcode):
-		for ctrl in self.controls.get('rgb', []):
-			ctrl.setColor(hexcode)
+	def getState(self):
+		return [x for clist in self.controls.values() for c in clist for x in c.getState()]
 	
-	def setIntensity(self, value):
-		for ctrl in self.controls.get('intensity', []):
-			ctrl.setIntensity(value)
+	def triggerMacro(self, macro_type, macro, speed=None):
+		import pdb; pdb.set_trace()
+		for label, ctrls in self.controls.items():
+			if(label != 'program'):
+				continue
+			for ctrl in ctrls:
+				if(ctrl.macro_type == macro_type and ctrl.hasMacro(macro)):
+					ctrl.triggerMacro(macro, speed=speed)
 
 class RGBControl(object):
 	def __init__(self):
@@ -123,17 +132,25 @@ class ProgramControl(object):
 	def __init__(self):
 		self.program_offset = None
 		self.program_speed_offset = None
-		self.program_type = None
+		self.macro_type = None
 		self.program_macros = dict()
 		self.program_value = 0
-		self.program_speed_value = 0
+		self.program_speed_value = None
+	
+	def hasMacro(self, label):
+		return label in self.program_macros
 	
 	def setMacro(self, label, value, speed):
 		self.program_macros[label] = (value, speed)
 	
+	def triggerMacro(self, label, speed=None):
+		value, original_speed = self.program_macros[label]
+		self.program_value = value
+		self.program_speed_value = speed or original_speed
+		
 	def configure(self, channel, fixturedef):
 		self.program_offset = channel['offset']
-		self.program_type = channel['type']
+		self.macro_type = channel['type']
 		self.program_speed_offset = channel.get('speed_offset', fixturedef.get('strobe_offset', None))
 		for label, conf in channel.get('macros', {}).items():
 			if(isinstance(conf, int)):
@@ -141,9 +158,6 @@ class ProgramControl(object):
 			else:
 				self.setMacro(label, conf['value'], conf['speed'])
 		return 'program'
-	
-	def setProgram(self, label, speed=None):
-		pass
 	
 	def getState(self):
 		return [

@@ -39,6 +39,9 @@ def main():
 	})
 	f.setColor('#ff0000')
 	f.setIntensity(255)
+	f.setStrobe(127)
+	f.triggerMacro('color', 'white')
+	f.triggerMacro('program', 'slow-fade')
 	
 	# #example code
 	# f.setColor('#fff')
