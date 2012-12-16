@@ -66,7 +66,8 @@ class RGBControl(object):
 		return 'rgb'
 	
 	def setColor(self, hexcode):
-		r, g, b = hex_to_rgb(str(hexcode))
+		# for some reason this is out of order
+		r, b, g = hex_to_rgb(str(hexcode))
 		self.red_level = r
 		self.green_level = g
 		self.blue_level = b

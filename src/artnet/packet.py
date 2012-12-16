@@ -49,16 +49,16 @@ class ArtNetPacket(object):
 class DmxPacket(ArtNetPacket):
 	opcode = 0x0050
 	
-	def __init__(self, sequence=0, **kwargs):
+	def __init__(self, sequence=0, channels=None, **kwargs):
 		super(DmxPacket, self).__init__(**kwargs)
 		self.sequence = sequence
-		self.channels = [0] * 512
+		self.channels = channels or ([0] * 512)
 	
 	def __setitem__(self, channel, value):
 		if not(isinstance(value, int)):
 			raise TypeError("Invalid DMX value: %r" % [value])
-		if(value < 0 or value > 255):
-			raise ValueError("Invalid DMX value: %r " % [value])
+		# if(value < 0 or value > 255):
+		# 	raise ValueError("Invalid DMX value: %r " % [value])
 		if(channel < 0 or channel > 511):
 			raise ValueError("Invalid DMX channel: %r " % [channel])
 		self.channels[channel] = value
