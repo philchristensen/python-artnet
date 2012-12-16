@@ -38,10 +38,11 @@ class Fixture(object):
 		self.controls.setdefault(label, []).append(control)
 	
 	def getState(self):
-		return [x for clist in self.controls.values() for c in clist for x in c.getState()]
+		#do program channels last, since we might be using strobe for speed
+		prg_cmp = lambda a,b: [-1,1][a[0] == 'program']
+		return [x for clist in sorted(self.controls.items(), prg_cmp) for c in clist[1] for x in c.getState()]
 	
 	def triggerMacro(self, macro_type, macro, speed=None):
-		import pdb; pdb.set_trace()
 		for label, ctrls in self.controls.items():
 			if(label != 'program'):
 				continue
@@ -65,7 +66,7 @@ class RGBControl(object):
 		return 'rgb'
 	
 	def setColor(self, hexcode):
-		r, g, b = hex_to_rgb(hexcode)
+		r, g, b = hex_to_rgb(str(hexcode))
 		self.red_level = r
 		self.green_level = g
 		self.blue_level = b
@@ -135,7 +136,7 @@ class ProgramControl(object):
 		self.macro_type = None
 		self.program_macros = dict()
 		self.program_value = 0
-		self.program_speed_value = None
+		self.program_speed_value = 0
 	
 	def hasMacro(self, label):
 		return label in self.program_macros
@@ -151,7 +152,8 @@ class ProgramControl(object):
 	def configure(self, channel, fixturedef):
 		self.program_offset = channel['offset']
 		self.macro_type = channel['type']
-		self.program_speed_offset = channel.get('speed_offset', fixturedef.get('strobe_offset', None))
+		if(channel['type'] == 'program'):
+			self.program_speed_offset = channel.get('speed_offset', fixturedef.get('strobe_offset', None))
 		for label, conf in channel.get('macros', {}).items():
 			if(isinstance(conf, int)):
 				self.setMacro(label, conf, None)
@@ -160,10 +162,12 @@ class ProgramControl(object):
 		return 'program'
 	
 	def getState(self):
-		return [
-			(self.program_offset, self.program_value),
-			(self.program_speed_offset, self.program_speed_value)
-		]
+		result = []
+		if(self.program_value):
+			result.append((self.program_offset, self.program_value))
+			if(self.program_speed_offset):
+				result.append((self.program_speed_offset, self.program_speed_value))
+		return result
 
 class IntensityControl(object):
 	def __init__(self):

@@ -66,6 +66,17 @@ class DmxPacket(ArtNetPacket):
 	def __getitem__(self, index):
 		return self.channels[index]
 	
+	def __str__(self):
+		return '<DMX(%(sequence)s): %(channels)s>' % dict(
+			sequence = self.sequence,
+			channels = ', '.join([
+				'%s: %s' % (
+					address + 1,
+					self.channels[address]
+				) for address in range(len(self.channels)) if self.channels[address]
+			])
+		)
+	
 	def encode(self):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
 		len_lo, len_hi = lohi(512)
