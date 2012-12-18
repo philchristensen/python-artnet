@@ -1,10 +1,12 @@
 import sys
 
-import artnet
+from artnet import dmx
 
 def main():
 	if(len(sys.argv) < 2):
 		sys.argv.append('<broadcast>')
 	
-	artnet.send_dmx(sys.argv[1], [127] * 512)
+	q = dmx.Controller(sys.argv[1], nodaemon=True)
+	q.enqueue([[0] * 512])
+	q.start()
 

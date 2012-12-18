@@ -20,6 +20,7 @@ setup(
 			'artnet_listener = artnet.listener:main',
 			'artnet_blackout = artnet.scripts.blackout:main',
 			'artnet_halfup = artnet.scripts.halfup:main',
+			'artnet_strobe = artnet.scripts.strobe:main',
 			'artnet_test_fixture = artnet.scripts.test_fixture:main',
 		]
 	},
