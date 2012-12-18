@@ -1,4 +1,4 @@
-import time, sys, socket, logging
+import time, sys, socket, logging, threading
 
 from artnet import packet
 
@@ -33,8 +33,9 @@ def get_channels(fixtures):
 			channels[(f.address - 1) + offset] = value
 	return channels
 
-class PacketQueue(object):
+class PacketQueue(threading.Thread):
 	def __init__(self, address, fps=40.0):
+		super(PacketQueue, self).__init__()
 		self.address = address
 		self.fps = fps
 		self.last_frame = [0] * 512

@@ -1,3 +1,16 @@
+import yaml
+import pkg_resources as pkg
+
+def load(defpath):
+	if(defpath.startswith('/')):
+		f = open(defpath, 'r')
+	else:
+		f = pkg.resource_stream('artnet.logical', 'fixtures/%s' % defpath)
+	try:
+		return yaml.safe_load(f)
+	finally:
+		f.close()
+
 def hex_to_rgb(value):
 	value = value.lstrip('#')
 	lv = len(value)
