@@ -17,19 +17,14 @@ def main():
 	#f.triggerMacro('program', 'soundsens')
 	#f.setStrobe(255)
 	
-	frame1 = dmx.get_channels(f)
+	red = dmx.get_channels(f)
 	f.setColor('#0000ff')
-	frame2 = dmx.get_channels(f)
-	f.setColor('#00ff00')
-	frame3 = dmx.get_channels(f)
-	
-	f.setIntensity(1)
+	blue = dmx.get_channels(f)
 	f.setColor('#000000')
 	blackout = dmx.get_channels(f)
 	
-	q = dmx.PacketQueue(sys.argv[1])
-	q.enqueue(dmx.create_multifade([frame1, frame2, frame3] * 3, secs=5.0))
-	q.enqueue(dmx.create_multifade([frame1, frame2, frame3] * 6, secs=5.0))
+	q = dmx.Controller(sys.argv[1], nodaemon=True)
+	q.enqueue(dmx.create_multifade([red, blue] * 3, secs=5.0))
 	q.enqueue([blackout])
 	q.start()
 

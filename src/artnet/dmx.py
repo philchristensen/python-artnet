@@ -33,23 +33,45 @@ def get_channels(fixtures):
 			channels[(f.address - 1) + offset] = value
 	return channels
 
-class PacketQueue(threading.Thread):
-	def __init__(self, address, fps=40.0):
-		super(PacketQueue, self).__init__()
+class Controller(threading.Thread):
+	def __init__(self, address, fps=40.0, nodaemon=False):
+		super(Controller, self).__init__()
 		self.address = address
 		self.fps = fps
 		self.last_frame = [0] * 512
 		self.queue = []
+		self.access_lock = threading.Lock()
+		self.nodaemon = nodaemon
+		self.daemon = not nodaemon
 		self.running = True
 	
+	def stop(self):
+		try:
+			self.access_lock.acquire()
+			if(self.running):
+				self.running = False
+		finally:
+			self.access_lock.release()
+	
 	def enqueue(self, frames):
-		self.queue.extend(frames)
+		try:
+			self.access_lock.acquire()
+			self.queue.extend(frames)
+		finally:
+			self.access_lock.release()
+	
+	def dequeue(self):
+		try:
+			self.access_lock.acquire()
+			return self.queue.pop(0)
+		finally:
+			self.access_lock.release()
 	
 	def run(self):
 		now = time.time()
-		while(self.queue):
+		while(self.queue if self.nodaemon else self.running):
 			drift = now - time.time()
-			self.last_frame = self.queue.pop() if self.is_busy() else self.last_frame
+			self.last_frame = self.dequeue() if self.is_busy() else self.last_frame
 			self.send_dmx(self.last_frame)
 			elapsed = time.time() - now
 			excess = (1 / self.fps) - elapsed
@@ -59,12 +81,6 @@ class PacketQueue(threading.Thread):
 	
 	def is_busy(self):
 		return bool(self.queue)
-	
-	def send_next_frame(self):
-		pass
-	
-	def send_last_frame(self):
-		pass
 	
 	def send_dmx(self, channels):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
