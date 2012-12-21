@@ -23,6 +23,15 @@ def create_fade(start, end, secs=5.0, fps=40):
 		result.append(f)
 	return result
 
+def generate_fade(start, end, frameindex=0, beatindex=0, secs=5.0, fps=40):
+	for position in range(int(secs * fps)):
+		f = Frame()
+		for channel in range(len(start)):
+			a = start[channel] or 0
+			b = end[channel] or 0
+			f[channel] = int(a + (((b - a) / (secs * fps)) * position))
+		yield f
+
 def get_channels(fixtures):
 	fixtures = fixtures if isinstance(fixtures, list) else [fixtures]
 	channels = [0] * 512

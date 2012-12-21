@@ -28,10 +28,12 @@ def main():
 	# g = iter(dmx.create_multifade([red, blue] * 3, secs=5.0))
 	# q.add(g)
 	
-	def _timeout():
-		time.sleep(1)
-		yield dmx.Frame()
-	q.add(_timeout())
+	# def _timeout():
+	# 	time.sleep(1)
+	# 	yield dmx.Frame()
+	# q.add(_timeout())
+	
+	q.add(dmx.generate_fade(red, blue))
 	
 	q.start()
 
