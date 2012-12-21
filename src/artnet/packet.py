@@ -1,7 +1,5 @@
 import socket, struct, itertools, time
 
-from artnet import listener
-
 HEADER = 'Art-Net\0'
 PROTOCOL_VERSION = 14
 
@@ -49,22 +47,11 @@ class ArtNetPacket(object):
 class DmxPacket(ArtNetPacket):
 	opcode = 0x0050
 	
-	def __init__(self, sequence=0, channels=None, **kwargs):
+	def __init__(self, frame=None, sequence=0, **kwargs):
 		super(DmxPacket, self).__init__(**kwargs)
+		from artnet import dmx
 		self.sequence = sequence
-		self.channels = channels or ([0] * 512)
-	
-	def __setitem__(self, channel, value):
-		if not(isinstance(value, int)):
-			raise TypeError("Invalid DMX value: %r" % [value])
-		# if(value < 0 or value > 255):
-		# 	raise ValueError("Invalid DMX value: %r " % [value])
-		if(channel < 0 or channel > 511):
-			raise ValueError("Invalid DMX channel: %r " % [channel])
-		self.channels[channel] = value
-	
-	def __getitem__(self, index):
-		return self.channels[index]
+		self.frame = frame or dmx.Frame()
 	
 	def __str__(self):
 		return '<DMX(%(sequence)s): %(channels)s>' % dict(
@@ -72,8 +59,8 @@ class DmxPacket(ArtNetPacket):
 			channels = ', '.join([
 				'%s: %s' % (
 					address + 1,
-					self.channels[address]
-				) for address in range(len(self.channels)) if self.channels[address]
+					self.frame[address]
+				) for address in range(len(self.channels)) if self.frame[address]
 			])
 		)
 	
@@ -83,7 +70,7 @@ class DmxPacket(ArtNetPacket):
 		header = struct.pack('!8sHBBBBHBB', 
 			HEADER, self.opcode, proto_hi, proto_lo,
 			self.sequence, self.physical, self.universe, len_hi, len_lo)
-		return header + ''.join([0 if c is None else struct.pack('!B', c) for c in self.channels])
+		return header + ''.join([struct.pack('!B', 0 if c is None else c) for c in self.frame])
 	
 	@classmethod
 	def decode(cls, address, data):

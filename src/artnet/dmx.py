@@ -15,12 +15,12 @@ def create_multifade(frames, secs=5.0, fps=40):
 def create_fade(start, end, secs=5.0, fps=40):
 	result = []
 	for position in range(int(secs * fps)):
-		frame = [0] * 512
+		f = Frame()
 		for channel in range(len(start)):
 			a = start[channel] or 0
 			b = end[channel] or 0
-			frame[channel] = int(a + (((b - a) / (secs * fps)) * position))
-		result.append(frame)
+			f[channel] = int(a + (((b - a) / (secs * fps)) * position))
+		result.append(f)
 	return result
 
 def get_channels(fixtures):
@@ -33,12 +33,27 @@ def get_channels(fixtures):
 			channels[(f.address - 1) + offset] = value
 	return channels
 
+class Frame(list):
+	def __init__(self, channels=None):
+		super(Frame, self).__init__((channels[i] if channels else None for i in xrange(512)))
+	
+	def __setitem__(self, index, value):
+		if not(isinstance(index, int)):
+			raise TypeError("Invalid channel index: %r" % index)
+		if not(0 <= index < 512):
+			raise ValueError("Invalid channel index: %r" % index)
+		if not(isinstance(value, int)):
+			raise TypeError("Invalid value index: %r" % index)
+		if not(0 <= value < 256):
+			raise ValueError("Invalid value index: %r" % index)
+		super(Frame, self).__setitem__(index, value)
+
 class Controller(threading.Thread):
 	def __init__(self, address, fps=40.0, nodaemon=False):
 		super(Controller, self).__init__()
 		self.address = address
 		self.fps = fps
-		self.last_frame = [0] * 512
+		self.last_frame = Frame()
 		self.queue = []
 		self.access_lock = threading.Lock()
 		self.nodaemon = nodaemon
@@ -82,14 +97,12 @@ class Controller(threading.Thread):
 	def is_busy(self):
 		return bool(self.queue)
 	
-	def send_dmx(self, channels):
+	def send_dmx(self, frame):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		sock.bind(('', packet.ARTNET_PORT))
 		
-		p = packet.DmxPacket()
-		for index in range(len(channels)):
-			p[index] = channels[index]
+		p = packet.DmxPacket(frame)
 		
 		#log.info(p)
 		
