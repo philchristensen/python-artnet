@@ -33,7 +33,9 @@ def main():
 	# 	yield dmx.Frame()
 	# q.add(_timeout())
 	
-	q.add(dmx.generate_fade(red, blue))
+	# q.add(dmx.pulse_beat(q.get_clock(), red, blue))
+	
+	q.add(iter([blackout]))
 	
 	q.start()
 

@@ -23,7 +23,7 @@ def create_fade(start, end, secs=5.0, fps=40):
 		result.append(f)
 	return result
 
-def generate_fade(start, end, frameindex=0, beatindex=0, secs=5.0, fps=40):
+def generate_fade(start, end, secs=5.0, fps=40):
 	for position in range(int(secs * fps)):
 		f = Frame()
 		for channel in range(len(start)):
@@ -31,6 +31,16 @@ def generate_fade(start, end, frameindex=0, beatindex=0, secs=5.0, fps=40):
 			b = end[channel] or 0
 			f[channel] = int(a + (((b - a) / (secs * fps)) * position))
 		yield f
+
+def pulse_beat(clock, start, end):
+	c = clock()
+	while(c['running']):
+		if(c['beat'] % 2):
+			yield start
+		else:
+			yield end
+		
+		c = clock()
 
 def get_channels(fixtures):
 	fixtures = fixtures if isinstance(fixtures, list) else [fixtures]
@@ -62,16 +72,36 @@ class Frame(list):
 			self[i] = self[i] if frame[i] is None else frame[i]
 
 class Controller(threading.Thread):
-	def __init__(self, address, fps=40.0, nodaemon=False):
+	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False):
 		super(Controller, self).__init__()
 		self.address = address
 		self.fps = fps
+		self.bpm = bpm
+		self.measure = measure
+		self.fpb = (fps * 60) / bpm
 		self.last_frame = Frame()
 		self.generators = []
 		self.access_lock = threading.Lock()
 		self.nodaemon = nodaemon
 		self.daemon = not nodaemon
 		self.running = True
+		self.frameindex = 0
+		self.beatindex = 0
+		self.beat = 0
+	
+	def get_clock(self):
+		def _clock():
+			return dict(
+				beat = self.beat,
+				measure = self.measure,
+				frameindex = self.frameindex,
+				fps = self.fps,
+				beatindex = self.beatindex,
+				fpb = self.fpb,
+				running = self.running,
+				last = self.last_frame
+			)
+		return _clock
 	
 	def stop(self):
 		try:
@@ -96,11 +126,20 @@ class Controller(threading.Thread):
 				f = f.merge(n) if f else n
 			except StopIteration:
 				self.generators.remove(g)
+		
+		self.frameindex = self.frameindex + 1 if self.frameindex < self.fps - 1 else 0
+		self.beatindex = self.beatindex + 1 if self.beatindex < self.fpb - 1 else 0
+		if self.beatindex < self.fpb - 1:
+			self.beatindex += 1
+		else:
+			self.beatindex = 0
+			self.beat = self.beat + 1 if self.beat < self.measure - 1 else 0
+		
 		self.last_frame = f if f else self.last_frame
 	
 	def run(self):
 		now = time.time()
-		while(self.generators if self.nodaemon else self.running):
+		while(self.running):
 			drift = now - time.time()
 			self.iterate()
 			self.send(self.last_frame)
