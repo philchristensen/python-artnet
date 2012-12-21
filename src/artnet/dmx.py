@@ -47,6 +47,10 @@ class Frame(list):
 		if not(0 <= value < 256):
 			raise ValueError("Invalid value index: %r" % index)
 		super(Frame, self).__setitem__(index, value)
+	
+	def merge(self, frame):
+		for i in range(512):
+			self[i] = self[i] if frame[i] is None else frame[i]
 
 class Controller(threading.Thread):
 	def __init__(self, address, fps=40.0, nodaemon=False):
@@ -54,7 +58,7 @@ class Controller(threading.Thread):
 		self.address = address
 		self.fps = fps
 		self.last_frame = Frame()
-		self.queue = []
+		self.generators = []
 		self.access_lock = threading.Lock()
 		self.nodaemon = nodaemon
 		self.daemon = not nodaemon
@@ -68,36 +72,38 @@ class Controller(threading.Thread):
 		finally:
 			self.access_lock.release()
 	
-	def enqueue(self, frames):
+	def add(self, generator):
 		try:
 			self.access_lock.acquire()
-			self.queue.extend(frames)
+			self.generators.append(generator)
 		finally:
 			self.access_lock.release()
 	
-	def dequeue(self):
-		try:
-			self.access_lock.acquire()
-			return self.queue.pop(0)
-		finally:
-			self.access_lock.release()
+	def iterate(self):
+		f = None
+		for g in self.generators:
+			try:
+				n = g.next()
+				f = f.merge(n) if f else n
+			except StopIteration:
+				self.generators.remove(g)
+		self.last_frame = f if f else self.last_frame
 	
 	def run(self):
 		now = time.time()
-		while(self.queue if self.nodaemon else self.running):
+		while(self.generators if self.nodaemon else self.running):
 			drift = now - time.time()
-			self.last_frame = self.dequeue() if self.is_busy() else self.last_frame
-			self.send_dmx(self.last_frame)
+			self.iterate()
+			self.send(self.last_frame)
 			elapsed = time.time() - now
 			excess = (1 / self.fps) - elapsed
 			if(excess > 0):
 				time.sleep(excess - drift)
+			else:
+				log.warning("Frame rate loss; generators took %ss too long" % round(abs(excess), 2))
 			now = time.time()
 	
-	def is_busy(self):
-		return bool(self.queue)
-	
-	def send_dmx(self, frame):
+	def send(self, frame):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		sock.bind(('', packet.ARTNET_PORT))

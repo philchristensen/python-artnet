@@ -24,8 +24,15 @@ def main():
 	blackout = dmx.get_channels(f)
 	
 	q = dmx.Controller(sys.argv[1], nodaemon=True)
-	q.enqueue(dmx.create_multifade([red, blue] * 3, secs=5.0))
-	q.enqueue([blackout])
+
+	# g = iter(dmx.create_multifade([red, blue] * 3, secs=5.0))
+	# q.add(g)
+	
+	def _timeout():
+		time.sleep(1)
+		yield dmx.Frame()
+	q.add(_timeout())
+	
 	q.start()
 
 if(__name__ == '__main__'):
