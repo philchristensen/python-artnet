@@ -5,12 +5,21 @@ import sys, time
 from artnet import dmx, packet
 from artnet.logical import fixtures
 
+import logging
+log = logging.getLogger(__name__)
+
 def main():
 	if(len(sys.argv) < 2):
 		sys.argv.append('192.168.0.88') #<broadcast>')
 	
-	f = fixtures.Fixture(427)
-	f.configure(fixtures.load('chauvet/slimpar-64.yaml'))
+	def _mkfixture(address):
+		x = fixtures.Fixture(address)
+		x.configure(fixtures.load('chauvet/slimpar-64.yaml'))
+		return x
+	
+	fixlist = [_mkfixture(x) for x in [420, 427, 434, 441]]
+	f = fixtures.FixtureGroup(fixlist)
+	
 	f.setColor('#ff0000')
 	f.setIntensity(255)
 	#f.triggerMacro('color', 'purple')

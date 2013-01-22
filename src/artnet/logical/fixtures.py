@@ -1,5 +1,9 @@
 import yaml
+import logging
 import pkg_resources as pkg
+
+
+log = logging.getLogger(__name__)
 
 def load(defpath):
 	if(defpath.startswith('/')):
@@ -20,7 +24,18 @@ def rgb_to_hex(rgb):
 	return '#%02x%02x%02x' % rgb
 
 class FixtureGroup(object):
-	fixtures = []
+	def __init__(self, fixtures=[]):
+		self.fixtures = fixtures
+	
+	def __getattr__(self, funcname):
+		def _dispatch(*args, **kwargs):
+			results = []
+			for f in self.fixtures:
+				func = getattr(f, funcname)
+				if(callable(func)):
+					results.append(func(*args, **kwargs))
+			return results
+		return _dispatch
 
 class Fixture(object):
 	def __init__(self, address):

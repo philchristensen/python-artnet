@@ -42,8 +42,8 @@ def pulse_beat(clock, start, end):
 		
 		c = clock()
 
-def get_channels(fixtures):
-	fixtures = fixtures if isinstance(fixtures, list) else [fixtures]
+def get_channels(group):
+	fixtures = group.fixtures if hasattr(group, 'fixtures') else [group]
 	channels = [0] * 512
 	for f in fixtures:
 		for offset, value in f.getState():
