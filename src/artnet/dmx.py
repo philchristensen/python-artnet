@@ -32,14 +32,16 @@ def generate_fade(start, end, secs=5.0, fps=40):
 			f[channel] = int(a + (((b - a) / (secs * fps)) * position))
 		yield f
 
-def pulse_beat(clock, start, end):
+def pulse_beat(clock, start, end, secs=5.0):
+	t = time.time()
 	c = clock()
 	while(c['running']):
 		if(c['beat'] % 2):
 			yield start
 		else:
 			yield end
-		
+		if(time.time() - t >= secs):
+			return
 		c = clock()
 
 def get_channels(group):
@@ -72,7 +74,7 @@ class Frame(list):
 			self[i] = self[i] if frame[i] is None else frame[i]
 
 class Controller(threading.Thread):
-	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False):
+	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False, runout=False):
 		super(Controller, self).__init__()
 		self.address = address
 		self.fps = fps
@@ -84,6 +86,7 @@ class Controller(threading.Thread):
 		self.access_lock = threading.Lock()
 		self.nodaemon = nodaemon
 		self.daemon = not nodaemon
+		self.runout = runout
 		self.running = True
 		self.frameindex = 0
 		self.beatindex = 0
@@ -141,12 +144,18 @@ class Controller(threading.Thread):
 		now = time.time()
 		while(self.running):
 			drift = now - time.time()
+			
+			# do anything potentially framerate-affecting here
 			self.iterate()
 			self.send(self.last_frame)
+			if(self.runout and len(self.generators) == 0):
+				self.running = False
+			# end framerate-affecting code
+			
 			elapsed = time.time() - now
 			excess = (1 / self.fps) - elapsed
 			if(excess > 0):
-				time.sleep(excess - drift)
+				time.sleep(excess - drift if self.running else 0)
 			else:
 				log.warning("Frame rate loss; generators took %ss too long" % round(abs(excess), 2))
 			now = time.time()

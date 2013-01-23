@@ -8,12 +8,9 @@ from artnet.logical import fixtures
 import logging
 log = logging.getLogger(__name__)
 
-def main():
-	if(len(sys.argv) < 2):
-		sys.argv.append('192.168.0.88') #<broadcast>')
-	
-	def _mkfixture(address):
-		x = fixtures.Fixture(address)
+def main(address):
+	def _mkfixture(a):
+		x = fixtures.Fixture(a)
 		x.configure(fixtures.load('chauvet/slimpar-64.yaml'))
 		return x
 	
@@ -32,7 +29,7 @@ def main():
 	f.setColor('#000000')
 	blackout = dmx.get_channels(f)
 	
-	q = dmx.Controller(sys.argv[1], nodaemon=True)
+	q = dmx.Controller(address, nodaemon=True, runout=True)
 
 	# g = iter(dmx.create_multifade([red, blue] * 3, secs=5.0))
 	# q.add(g)
@@ -42,9 +39,7 @@ def main():
 	# 	yield dmx.Frame()
 	# q.add(_timeout())
 	
-	# q.add(dmx.pulse_beat(q.get_clock(), red, blue))
-	
-	q.add(iter([blackout]))
+	q.add(dmx.pulse_beat(q.get_clock(), red, blue))
 	
 	q.start()
 

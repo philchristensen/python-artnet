@@ -2,7 +2,8 @@ import sys
 
 from cement.core import backend, foundation, controller, handler
 
-logo_ascii = """           _   _                         _            _
+logo_ascii = """
+           _   _                         _            _
  _ __ _  _| |_| |_  ___ _ _ ___ __ _ _ _| |_ _ _  ___| |_ 
 | '_ \ || |  _| ' \/ _ \ ' \___/ _` | '_|  _| ' \/ -_)  _|
 | .__/\_, |\__|_||_\___/_||_|  \__,_|_|  \__|_||_\___|\__|
@@ -27,17 +28,27 @@ class ArtnetBaseController(controller.CementBaseController):
 	
 	@controller.expose(help="Send a blackout command to a particular interface.")
 	def blackout(self):
-		from artnet.scripts import blackout
+		from artnet.scripts import all_channels_blackout as blackout
 		blackout.main(self.config.get('base', 'address'))
 	
-	@controller.expose(help="Send a halfup test command to a particular interface.")
-	def halfup(self):
-		from artnet.scripts import halfup
-		halfup.main(self.config.get('base', 'address'))
-	
-	@controller.expose(help="this command does relatively nothing useful.")
+	@controller.expose(help="This command is not yet implemented.")
 	def shell(self):
 		self.log.error("Shell not yet implemented.")
+
+class ArtnetScriptController(controller.CementBaseController):
+	class Meta:
+		label = 'script'
+		description = "Artnet scripting support."
+		arguments = [
+			(['-a', '--address'], dict(action='store', help='Address of an artnet interface.')),
+			(['scriptname'], dict(action='store', help='Name of script to run.')),
+		]
+
+	@controller.expose(help="Run a named lighting script.")
+	def default(self):
+		name = self.app.pargs.scriptname
+		mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
+		getattr(mod, name).main(self.config.get('base', 'address'))
 
 class ArtnetApp(foundation.CementApp):
 	class Meta:
@@ -48,6 +59,7 @@ class ArtnetApp(foundation.CementApp):
 
 def main():
 	app = ArtnetApp()
+	handler.register(ArtnetScriptController)
 	
 	try:
 		app.setup()
