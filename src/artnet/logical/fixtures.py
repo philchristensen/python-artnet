@@ -2,6 +2,7 @@ import yaml
 import logging
 import pkg_resources as pkg
 
+from artnet import dmx
 
 log = logging.getLogger(__name__)
 
@@ -36,11 +37,26 @@ class FixtureGroup(object):
 					results.append(func(*args, **kwargs))
 			return results
 		return _dispatch
+	
+	def getChannels(self):
+		channels = dmx.Frame()
+		for f in self.fixtures:
+			for offset, value in f.getState():
+				if(offset is None):
+					continue
+				channels[(f.address - 1) + offset] = value
+		return channels
 
 class Fixture(object):
 	def __init__(self, address):
 		self.address = address
 		self.controls = dict()
+	
+	@classmethod
+	def create(cls, address, fixture_path):
+		f = cls(address)
+		f.configure(load(fixture_path))
+		return f
 	
 	def __getattr__(self, fixture_func):
 		for label, ctrls in self.controls.items():
@@ -69,6 +85,14 @@ class Fixture(object):
 		#do program channels last, since we might be using strobe for speed
 		prg_cmp = lambda a,b: [-1,1][a[0] == 'program']
 		return [x for clist in sorted(self.controls.items(), prg_cmp) for c in clist[1] for x in c.getState()]
+	
+	def getChannels(self):
+		channels = dmx.Frame()
+		for offset, value in self.getState():
+			if(offset is None):
+				continue
+			channels[(self.address - 1) + offset] = value
+		return channels
 	
 	def triggerMacro(self, macro_type, macro, speed=None):
 		for label, ctrls in self.controls.items():

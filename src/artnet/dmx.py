@@ -45,14 +45,7 @@ def pulse_beat(clock, start, end, secs=5.0):
 		c = clock()
 
 def get_channels(group):
-	fixtures = group.fixtures if hasattr(group, 'fixtures') else [group]
-	channels = [0] * 512
-	for f in fixtures:
-		for offset, value in f.getState():
-			if(offset is None):
-				continue
-			channels[(f.address - 1) + offset] = value
-	return channels
+	return group.getChannels()
 
 class Frame(list):
 	def __init__(self, channels=None):
@@ -64,14 +57,18 @@ class Frame(list):
 		if not(0 <= index < 512):
 			raise ValueError("Invalid channel index: %r" % index)
 		if not(isinstance(value, int)):
-			raise TypeError("Invalid value index: %r" % index)
+			raise TypeError("Invalid value type: %r" % value)
 		if not(0 <= value < 256):
-			raise ValueError("Invalid value index: %r" % index)
+			raise ValueError("Invalid value index: %r" % value)
 		super(Frame, self).__setitem__(index, value)
 	
 	def merge(self, frame):
+		result = Frame()
 		for i in range(512):
-			self[i] = self[i] if frame[i] is None else frame[i]
+			value = self[i] if frame[i] is None else frame[i]
+			if(value is not None):
+				result[i] = value
+		return result
 
 class Controller(threading.Thread):
 	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False, runout=False):
@@ -122,7 +119,7 @@ class Controller(threading.Thread):
 			self.access_lock.release()
 	
 	def iterate(self):
-		f = None
+		f = self.last_frame
 		for g in self.generators:
 			try:
 				n = g.next()
@@ -138,7 +135,7 @@ class Controller(threading.Thread):
 			self.beatindex = 0
 			self.beat = self.beat + 1 if self.beat < self.measure - 1 else 0
 		
-		self.last_frame = f if f else self.last_frame
+		self.last_frame = f
 	
 	def run(self):
 		now = time.time()
