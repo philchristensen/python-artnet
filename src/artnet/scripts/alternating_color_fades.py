@@ -3,7 +3,7 @@ import time
 from artnet import dmx, fixtures
 from artnet.dmx import fades
 
-# set up test fixtures
+# g = None
 g = fixtures.FixtureGroup([
 	fixtures.Fixture.create(420, 'chauvet/slimpar-64.yaml'),
 	fixtures.Fixture.create(427, 'chauvet/slimpar-64.yaml'),
@@ -27,8 +27,10 @@ def all_blue():
 	g.setIntensity(255)
 	return g.getFrame()
 
-def main(address):
-	q = dmx.Controller(address, bpm=60, nodaemon=True, runout=True)
+def main(config):
+	# global g
+	# g = get_default_fixture_group(config)
+	q = dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
 
 	q.add(fades.create_multifade([
 		all_red(),

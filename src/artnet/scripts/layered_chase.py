@@ -44,8 +44,8 @@ def single_white_beat_chase(clock, secs=5.0):
 			return
 		c = clock()
 
-def main(address):
-	q = dmx.Controller(address, bpm=60, nodaemon=True, runout=True)
+def main(config):
+	q = dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
 	# "base color" red
 	q.add(all_red())
 	# white chase layer

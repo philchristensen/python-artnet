@@ -29,7 +29,7 @@ class ArtnetBaseController(controller.CementBaseController):
 	@controller.expose(help="Send a blackout command to a particular interface.")
 	def blackout(self):
 		from artnet.scripts import all_channels_blackout as blackout
-		blackout.main(self.config.get('base', 'address'))
+		blackout.main(self.config)
 	
 	@controller.expose(help="This command is not yet implemented.")
 	def shell(self):
@@ -48,7 +48,7 @@ class ArtnetScriptController(controller.CementBaseController):
 	def default(self):
 		name = self.app.pargs.scriptname
 		mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
-		getattr(mod, name).main(self.config.get('base', 'address'))
+		getattr(mod, name).main(self.config)
 
 class ArtnetApp(foundation.CementApp):
 	class Meta:
