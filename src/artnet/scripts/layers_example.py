@@ -1,7 +1,6 @@
 import time
 
-from artnet import dmx
-from artnet.logical import fixtures
+from artnet import dmx, fixtures
 
 # set up test fixtures
 g = fixtures.FixtureGroup([
@@ -18,7 +17,7 @@ def all_red():
 	while(True):
 		g.setColor('#ff0000')
 		g.setIntensity(255)
-		yield g.getChannels()
+		yield g.getFrame()
 
 def single_white_beat_chase(clock, secs=5.0):
 	"""
@@ -36,7 +35,7 @@ def single_white_beat_chase(clock, secs=5.0):
 		f.setIntensity(255)
 		
 		# Grab just that fixture's DMX values
-		frame = f.getChannels()
+		frame = f.getFrame()
 		yield frame
 		if(secs and time.time() - t >= secs):
 			return

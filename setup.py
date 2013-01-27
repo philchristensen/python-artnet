@@ -17,7 +17,7 @@ setup(
 			'git = setuptools_git:gitlsfiles',
 		],
 		'console_scripts': [
-			'artnet = artnet.scripts.app:main',
+			'artnet = artnet.scripts:main',
 		]
 	},
 	

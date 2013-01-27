@@ -10,7 +10,7 @@ def load(defpath):
 	if(defpath.startswith('/')):
 		f = open(defpath, 'r')
 	else:
-		f = pkg.resource_stream('artnet.logical', 'fixtures/%s' % defpath)
+		f = pkg.resource_stream('artnet.fixtures', defpath)
 	try:
 		return yaml.safe_load(f)
 	finally:
@@ -38,14 +38,14 @@ class FixtureGroup(object):
 			return results
 		return _dispatch
 	
-	def getChannels(self):
-		channels = dmx.Frame()
+	def getFrame(self):
+		frame = dmx.Frame()
 		for f in self.fixtures:
 			for offset, value in f.getState():
 				if(offset is None):
 					continue
-				channels[(f.address - 1) + offset] = value
-		return channels
+				frame[(f.address - 1) + offset] = value
+		return frame
 
 class Fixture(object):
 	def __init__(self, address):
@@ -86,13 +86,13 @@ class Fixture(object):
 		prg_cmp = lambda a,b: [-1,1][a[0] == 'program']
 		return [x for clist in sorted(self.controls.items(), prg_cmp) for c in clist[1] for x in c.getState()]
 	
-	def getChannels(self):
-		channels = dmx.Frame()
+	def getFrame(self):
+		frame = dmx.Frame()
 		for offset, value in self.getState():
 			if(offset is None):
 				continue
-			channels[(self.address - 1) + offset] = value
-		return channels
+			frame[(self.address - 1) + offset] = value
+		return frame
 	
 	def triggerMacro(self, macro_type, macro, speed=None):
 		for label, ctrls in self.controls.items():
