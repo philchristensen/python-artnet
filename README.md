@@ -43,4 +43,15 @@ Or again with a specific address:
 
     artnet blackout --address=192.168.0.88
 
+Configure
+---------
+
+Creating an INI-format config file in ~/.artnet.conf will allow you to set defaults for any
+of the necessary command line options, as well as define rigs used by the logical fixture-
+based scripts that come with the distribution.
+
+**Example:**
+    [base]
+    address = 192.168.0.88
+
 
