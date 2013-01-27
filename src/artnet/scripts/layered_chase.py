@@ -10,14 +10,17 @@ g = fixtures.FixtureGroup([
 	fixtures.Fixture.create(441, 'chauvet/slimpar-64.yaml'),
 ])
 
-def all_red():
+def all_red(secs=5.0):
 	"""
 	A simple all-red light generator.
 	"""
+	t = time.time()
 	while(True):
 		g.setColor('#ff0000')
 		g.setIntensity(255)
 		yield g.getFrame()
+		if(secs and time.time() - t >= secs):
+			return
 
 def single_white_beat_chase(clock, secs=5.0):
 	"""
