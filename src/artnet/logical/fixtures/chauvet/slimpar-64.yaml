@@ -1,5 +1,6 @@
 {
-    "name": "Chauvet SlimPAR 64",
+    "manufacturer": "Chauvet",
+    "name": "SlimPAR 64",
     "rgb_offsets" : {
         "red": 0,
         "blue": 1,
