@@ -33,7 +33,8 @@ class ArtnetBaseController(controller.CementBaseController):
 	
 	@controller.expose(help="This command is not yet implemented.")
 	def shell(self):
-		self.log.error("Shell not yet implemented.")
+		from artnet.scripts import shell
+		shell.main(self.config)
 
 class ArtnetScriptController(controller.CementBaseController):
 	class Meta:
