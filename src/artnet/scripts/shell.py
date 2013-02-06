@@ -10,9 +10,14 @@ def main(config):
 	controller = dmx.Controller(config.get('base', 'address'), bpm=60)
 	controller.start()
 	
+	def _script_runner(scriptname):
+		from artnet import scripts
+		scripts.run(scriptname, config, controller)
+	
 	local = dict(
 		controller = controller,
-		ctl = controller
+		ctl = controller,
+		run = _script_runner
 	)
 	
 	try:

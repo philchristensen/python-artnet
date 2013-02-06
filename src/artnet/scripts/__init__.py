@@ -1,4 +1,5 @@
 import sys
+import logging
 
 from cement.core import backend, foundation, controller, handler
 
@@ -13,6 +14,15 @@ logo_ascii = """
 defaults = backend.defaults('base')
 defaults['base']['address'] = '<broadcast>'
 
+log = logging.getLogger(__name__)
+
+def run(name, config, controller=None):
+	mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
+	try:
+		getattr(mod, name).main(config, controller)
+	except:
+		log.error("Couldn't find lighting script named %r" % name)
+	
 class ArtnetBaseController(controller.CementBaseController):
 	class Meta:
 		label = 'base'
@@ -47,9 +57,7 @@ class ArtnetScriptController(controller.CementBaseController):
 
 	@controller.expose(help="Run a named lighting script.")
 	def default(self):
-		name = self.app.pargs.scriptname
-		mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
-		getattr(mod, name).main(self.config)
+		run(self.app.pargs.scriptname, self.config)
 
 class ArtnetApp(foundation.CementApp):
 	class Meta:

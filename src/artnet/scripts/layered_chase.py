@@ -16,7 +16,7 @@ def all_red(secs=5.0):
 	"""
 	t = time.time()
 	while(True):
-		g.setColor('#ff0000')
+		g.setColor('#0000ff')
 		g.setIntensity(255)
 		yield g.getFrame()
 		if(secs and time.time() - t >= secs):
@@ -44,11 +44,12 @@ def single_white_beat_chase(clock, secs=5.0):
 			return
 		c = clock()
 
-def main(config):
-	q = dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
+def main(config, controller=None):
+	q = controller or dmx.Controller(config.get('base', 'address'), bpm=240, nodaemon=True, runout=True)
 	# "base color" red
 	q.add(all_red())
 	# white chase layer
 	q.add(single_white_beat_chase(q.get_clock()))
-	q.start()
+	if not controller:
+		q.start()
 

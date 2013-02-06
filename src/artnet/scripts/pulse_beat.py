@@ -27,10 +27,11 @@ def all_blue():
 	g.setIntensity(255)
 	return g.getFrame()
 
-def main(config):
-	q = dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
+def main(config, controller=None):
+	q = controller or dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
 	
 	q.add(fades.pulse_beat(q.get_clock(), all_red(), all_blue(), secs=5.0))
 	
-	q.start()
+	if not controller:
+		q.start()
 

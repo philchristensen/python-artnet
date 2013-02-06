@@ -27,15 +27,16 @@ def all_blue():
 	g.setIntensity(255)
 	return g.getFrame()
 
-def main(config):
+def main(config, controller=None):
 	# global g
 	# g = get_default_fixture_group(config)
-	q = dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
+	q = controller or dmx.Controller(config.get('base', 'address'), bpm=60, nodaemon=True, runout=True)
 
 	q.add(fades.create_multifade([
 		all_red(),
 		all_blue(),
 	] * 3, secs=5.0))
 	
-	q.start()
+	if not controller:
+		q.start()
 
