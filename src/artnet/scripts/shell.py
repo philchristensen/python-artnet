@@ -17,9 +17,14 @@ def main(config):
 		from artnet import scripts
 		scripts.run(scriptname, config, controller)
 	
+	def _blackout():
+		from artnet import scripts
+		scripts.run('all_channels_blackout', config, controller)
+	
 	local = dict(
 		ctl = controller,
-		run = _script_runner
+		run = _script_runner,
+		blackout = _blackout,
 	)
 	
 	try:
