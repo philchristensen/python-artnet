@@ -1,15 +1,11 @@
 import time
 
-from artnet import dmx, fixtures
+from artnet import dmx, fixtures, rig
 from artnet.dmx import fades
 
-# g = None
-g = fixtures.FixtureGroup([
-	fixtures.Fixture.create(420, 'chauvet/slimpar-64.yaml'),
-	fixtures.Fixture.create(427, 'chauvet/slimpar-64.yaml'),
-	fixtures.Fixture.create(434, 'chauvet/slimpar-64.yaml'),
-	fixtures.Fixture.create(441, 'chauvet/slimpar-64.yaml'),
-])
+# set up test fixtures
+r = rig.get_default_rig()
+g = r.groups['all']
 
 def all_red():
 	"""

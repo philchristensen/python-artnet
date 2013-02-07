@@ -11,11 +11,13 @@ def main(config):
 	controller.start()
 	
 	def _script_runner(scriptname):
+		if(scriptname == 'shell'):
+			log.error("Can't create nested shells.")
+			return
 		from artnet import scripts
 		scripts.run(scriptname, config, controller)
 	
 	local = dict(
-		controller = controller,
 		ctl = controller,
 		run = _script_runner
 	)
