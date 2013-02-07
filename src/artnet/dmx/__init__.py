@@ -1,4 +1,4 @@
-import time, sys, socket, logging, threading
+import time, sys, socket, logging, threading, itertools
 
 from artnet import packet
 
@@ -27,9 +27,25 @@ class Frame(list):
 				result[i] = value
 		return result
 
+class AutoCycler(object):
+	def __init__(self, controller):
+		self.controller = controller
+		self.enabled = False
+	
+	def __enter__(self):
+		self.enabled = True
+	
+	def __exit__(self, etype, e, trace):
+		self.enabled = False
+		return False
+
 class Controller(threading.Thread):
 	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False, runout=False):
 		super(Controller, self).__init__()
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.sock.bind(('', packet.ARTNET_PORT))
+		
 		self.address = address
 		self.fps = fps
 		self.bpm = bpm
@@ -45,6 +61,7 @@ class Controller(threading.Thread):
 		self.frameindex = 0
 		self.beatindex = 0
 		self.beat = 0
+		self.autocycle = AutoCycler(self)
 	
 	def get_clock(self):
 		def _clock():
@@ -71,7 +88,10 @@ class Controller(threading.Thread):
 	def add(self, generator):
 		try:
 			self.access_lock.acquire()
-			self.generators.append(generator)
+			if(self.autocycle.enabled):
+				self.generators.append(itertools.cycle(generator))
+			else:
+				self.generators.append(generator)
 		finally:
 			self.access_lock.release()
 	
@@ -111,19 +131,10 @@ class Controller(threading.Thread):
 			if(excess > 0):
 				time.sleep(excess - drift if self.running else 0)
 			else:
-				log.warning("Frame rate loss; generators took %ss too long" % round(abs(excess), 2))
+				log.warning("Frame rate loss; generators took %sms too long" % round(abs(excess * 1000)))
 			now = time.time()
 	
 	def send(self, frame):
-		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		sock.bind(('', packet.ARTNET_PORT))
-		
 		p = packet.DmxPacket(frame)
-		
-		#log.info(p)
-		
-		sock.sendto(p.encode(), (self.address, packet.ARTNET_PORT))
-		sock.close()
-
+		self.sock.sendto(p.encode(), (self.address, packet.ARTNET_PORT))
 	

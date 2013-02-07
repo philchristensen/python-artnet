@@ -14,17 +14,14 @@ def main(config):
 		if(scriptname == 'shell'):
 			log.error("Can't create nested shells.")
 			return
-		from artnet import scripts
-		scripts.run(scriptname, config, controller)
-	
-	def _blackout():
-		from artnet import scripts
-		scripts.run('all_channels_blackout', config, controller)
+		with controller.autocycle:
+			from artnet import scripts
+			scripts.run(scriptname, config, controller)
 	
 	local = dict(
 		ctl = controller,
 		run = _script_runner,
-		blackout = _blackout,
+		blackout = lambda: _script_runner('all_channels_blackout'),
 	)
 	
 	try:
