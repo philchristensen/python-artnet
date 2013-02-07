@@ -93,13 +93,14 @@ A simple example rig might be:
 
 This should be relatively self-explanatory, but to be clear, the 'fixtures' hash defines the available
 lighting instruments, while the 'groups' hash gives names to various ordered combinations of fixtures.
+Note that several of the example scripts expect the existence of an 'all' group.
 
 Included in the distribution is a more complex example patch that shows off some of the 'layering'
 capabilities of python-artnet. It creates three generators:
 
  1. The first generator is an all-blue patch
  2. Next is a left-to-right white chase that is layered over the blue
- 3. Finally is a "bouncing" red chasee that is on top of everything
+ 3. Finally is a "bouncing" red chase that is on top of everything
 
 Try it out with:
 
