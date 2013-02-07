@@ -56,3 +56,54 @@ based scripts that come with the distribution.
     address = 192.168.0.88
 
 
+Next create a YAML-format config file in ~/.artnet-rig.yaml to describe your default rig. This
+will allow you to run the fixture-based example scripts by describing your logical fixture layout.
+A simple example rig might be:
+
+    # Example ~/.artnet-rig.yaml file
+    {
+        "name": "Example Rig",
+        
+        "fixtures": {
+            "slimpar_1": {
+                "address": 1,
+                "config": "chauvet/slimpar-64.yaml"
+            },
+            "slimpar_2": {
+                "address": 8,
+                "config": "chauvet/slimpar-64.yaml"
+            },
+            "slimpar_3": {
+                "address": 15,
+                "config": "chauvet/slimpar-64.yaml"
+            },
+            "slimpar_4": {
+                "address": 22,
+                "config": "chauvet/slimpar-64.yaml"
+            },
+        },
+        
+        "groups": {
+            "all": ["slimpar_1", "slimpar_2", "slimpar_3", "slimpar_4"],
+            "odds": ["slimpar_1", "slimpar_3"],
+            "evens": ["slimpar_2", "slimpar_4"],
+        },
+    }
+
+
+This should be relatively self-explanatory, but to be clear, the 'fixtures' hash defines the available
+lighting instruments, while the 'groups' hash gives names to various ordered combinations of fixtures.
+
+Included in the distribution is a more complex example patch that shows off some of the 'layering'
+capabilities of python-artnet. It creates three generators:
+
+ 1. The first generator is an all-blue patch
+ 2. Next is a left-to-right white chase that is layered over the blue
+ 3. Finally is a "bouncing" red chasee that is on top of everything
+
+Try it out with:
+
+    artnet script layered_chase
+
+
+
