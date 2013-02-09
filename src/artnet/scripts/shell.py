@@ -2,7 +2,7 @@ import sys
 import logging
 import code
 
-from artnet import dmx
+from artnet import dmx, rig
 
 log = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ def main(config):
 	controller = dmx.Controller(config.get('base', 'address'), bpm=60)
 	controller.start()
 	
-	def _script_runner(scriptname):
+	def _runner(scriptname):
 		if(scriptname == 'shell'):
 			log.error("Can't create nested shells.")
 			return
@@ -18,10 +18,21 @@ def main(config):
 			from artnet import scripts
 			scripts.run(scriptname, config, controller)
 	
+	def _watch(r):
+		def __watch(fixture, clock):
+			c = clock()
+			while(c['running']):
+				yield fixture.getFrame()
+				c = clock()
+		controller.add(__watch(r.groups['all'], controller.get_clock()))
+	
+	default_rig = rig.get_default_rig()
 	local = dict(
+		run = _runner,
 		ctl = controller,
-		run = _script_runner,
-		blackout = lambda: _script_runner('all_channels_blackout'),
+		rig = default_rig,
+		watch = _watch,
+		blackout = lambda: _runner('all_channels_blackout'),
 	)
 	
 	try:
