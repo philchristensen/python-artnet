@@ -30,7 +30,7 @@ def single_white_beat_chase(clock, secs=5.0):
 		g.setIntensity(0)
 		
 		# Grab one fixture, set its intensity
-		f = g.fixtures[c['beat'] - 1]
+		f = g[c['beat'] - 1]
 		f.setIntensity(255)
 		
 		# Grab just that fixture's DMX values
@@ -51,7 +51,7 @@ def bouncing_ball(clock, secs=5.0):
 	while(c['running']):
 		if not(c['frameindex'] % 4):
 			position += direction
-		if(position == len(g.fixtures)):
+		if(position == len(g)):
 			position -= 2
 			direction = -1
 		elif(position == 0):
@@ -62,7 +62,7 @@ def bouncing_ball(clock, secs=5.0):
 		g.setIntensity(0)
 		
 		# Grab one fixture, set its intensity
-		f = g.fixtures[position]
+		f = g[position]
 		f.setIntensity(255)
 		
 		# Grab just that fixture's DMX values

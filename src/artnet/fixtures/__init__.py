@@ -24,14 +24,14 @@ def hex_to_rgb(value):
 def rgb_to_hex(rgb):
 	return '#%02x%02x%02x' % rgb
 
-class FixtureGroup(object):
-	def __init__(self, fixtures=[]):
-		self.fixtures = fixtures
-	
+class FixtureGroup(list):
+	def __init__(self, fixtures=None):
+		super(FixtureGroup, self).__init__(fixtures if fixtures else [])
+    
 	def __getattr__(self, funcname):
 		def _dispatch(*args, **kwargs):
 			results = []
-			for f in self.fixtures:
+			for f in self:
 				func = getattr(f, funcname)
 				if(callable(func)):
 					results.append(func(*args, **kwargs))
@@ -40,7 +40,7 @@ class FixtureGroup(object):
 	
 	def getFrame(self):
 		frame = dmx.Frame()
-		for f in self.fixtures:
+		for f in self:
 			for offset, value in f.getState():
 				if(offset is None):
 					continue
