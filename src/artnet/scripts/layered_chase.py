@@ -73,7 +73,7 @@ def bouncing_ball(clock, secs=5.0):
 		c = clock()
 
 def main(config, controller=None):
-	q = controller or dmx.Controller(config.get('base', 'address'), bpm=240, nodaemon=True, runout=True)
+	q = controller or dmx.Controller(config.get('base', 'address'), bpm=240, nodaemon=False, runout=True)
 	# "base color" red
 	q.add(all_red())
 	# white chase layer

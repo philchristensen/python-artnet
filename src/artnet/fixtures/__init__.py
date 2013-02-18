@@ -124,6 +124,14 @@ class RGBControl(object):
 		self.green_level = g
 		self.blue_level = b
 	
+	def getColor(self):
+		# for some reason this is out of order
+		return rgb_to_hex((
+            self.red_level, 
+            self.blue_level,
+            self.green_level,
+        ))
+	
 	def getState(self):
 		return [
 			(self.red_offset, self.red_level),
@@ -176,6 +184,9 @@ class StrobeControl(object):
 	
 	def setStrobe(self, value):
 		self.strobe_value = value
+	
+	def getStrobe(self):
+		return self.strobe_value
 	
 	def getState(self):
 		return [
@@ -236,6 +247,9 @@ class IntensityControl(object):
 	
 	def setIntensity(self, value):
 		self.intensity_value = value
+	
+	def getIntensity(self):
+		return self.intensity_value
 	
 	def getState(self):
 		fine = []

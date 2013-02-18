@@ -137,4 +137,3 @@ class Controller(threading.Thread):
 	def send(self, frame):
 		p = packet.DmxPacket(frame)
 		self.sock.sendto(p.encode(), (self.address, packet.ARTNET_PORT))
-	
