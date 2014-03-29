@@ -20,7 +20,7 @@ def run(name, config, controller=None):
 	mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
 	try:
 		getattr(mod, name).main(config, controller)
-	except:
+	except AttributeError:
 		log.error("Couldn't find lighting script named %r" % name)
 	
 class ArtnetBaseController(controller.CementBaseController):
