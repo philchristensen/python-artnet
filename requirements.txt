@@ -1,2 +1,2 @@
-PyYAML>=3.10
-cement>=2.0.2
+PyYAML==3.10
+cement==2.0.2
