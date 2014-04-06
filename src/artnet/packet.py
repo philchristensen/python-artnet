@@ -66,11 +66,12 @@ class DmxPacket(ArtNetPacket):
 	
 	def encode(self):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
+	        universe_lo, universe_hi = lohi(self.universe)
 		len_lo, len_hi = lohi(512)
 		header = struct.pack('!8sHBBBBHBB', 
 			HEADER, self.opcode, proto_hi, proto_lo,
-			self.sequence, self.physical, self.universe, len_hi, len_lo)
-		return header + ''.join([struct.pack('!B', 0 if c is None else c) for c in self.frame])
+			self.sequence, self.physical, universe_lo, universe_hi, len_hi, len_lo)
+            	return header + ''.join([struct.pack('!B', 0 if c is None else c) for c in self.frame])
 	
 	@classmethod
 	def decode(cls, address, data):
