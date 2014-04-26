@@ -36,7 +36,6 @@ class ArtPollListener(threading.Thread):
 		def _poll():
 			p = packet.PollPacket(source=(ip_address, 6454))
 			l = self.sock.sendto(p.encode(), (self.broadcast_address, packet.ARTNET_PORT))
-			print 'poll packet: %s' % p
 		
 		self.sock.settimeout(0.0)
 		self.running = True
@@ -54,8 +53,11 @@ class ArtPollListener(threading.Thread):
 				continue
 			
 			p = packet.ArtNetPacket.parse(addr, data)
+			print 'got packet: %s' % p
 			
 			if(isinstance(p, packet.PollPacket)):
 				r = packet.PollReplyPacket([], source=(ip_address, 6454))
 				l = self.sock.sendto(r.encode(), (p.source[0], packet.ARTNET_PORT))
-				print 'poll reply packet: %s' % r
+
+if(__name__ == '__main__'):
+	main()

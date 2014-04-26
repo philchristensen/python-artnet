@@ -1,5 +1,7 @@
 import socket, struct, itertools, time
 
+import bitstring
+
 HEADER = 'Art-Net\0'
 PROTOCOL_VERSION = 14
 
@@ -60,7 +62,7 @@ class DmxPacket(ArtNetPacket):
 				'%s: %s' % (
 					address + 1,
 					self.frame[address]
-				) for address in range(len(self.channels)) if self.frame[address]
+				) for address in range(len(self.frame)) if self.frame[address]
 			])
 		)
 	
@@ -75,7 +77,22 @@ class DmxPacket(ArtNetPacket):
 	
 	@classmethod
 	def decode(cls, address, data):
-		return cls(source=address)
+		b = bitstring.BitStream(bytes=data)
+		fields = [
+			('id',			 b.read('bytes:8')),
+			('opcode',		 b.read('int:16')),
+			('protverhi',	 b.read('int:8')),
+			('protverlo',	 b.read('int:8')),
+			('sequence',	 b.read('int:8')),
+			('physical',	 b.read('int:8')),
+			('subuni',		 b.read('int:8')),
+			('net',			 b.read('int:8')),
+		]
+		length =  b.read('uintbe:16')
+		frame = b.readlist('int:' + ','.join(['8'] * length))
+		d = dict(fields)
+		from artnet import dmx
+		return cls(frame=dmx.Frame(frame), sequence=d['sequence'], source=address)
 
 class PollPacket(ArtNetPacket):
 	opcode = 0x0020
@@ -228,5 +245,31 @@ class TodRequestPacket(ArtNetPacket):
 			''.join([struct.pack('!B', x) for x in [0, 0, 0, 0, 1, 1]]),
 			''.join([struct.pack('!B', 0) for x in range(31)])
 		])
-
+	
+	@classmethod
+	def decode(cls, address, data):
+		b = bitstring.BitStream(bytes=data)
+		fields = [
+			('id',			 b.read('bytes:8')),
+			('opcode',		 b.read('int:16')),
+			('protverhi',	 b.read('int:8')),
+			('protverlo',	 b.read('int:8')),
+			('filler1',		 b.read('int:8')),
+			('filler2',		 b.read('int:8')),
+			('spare1',		 b.read('int:8')),
+			('spare2',		 b.read('int:8')),
+			('spare3',		 b.read('int:8')),
+			('spare4',		 b.read('int:8')),
+			('spare5',		 b.read('int:8')),
+			('spare6',		 b.read('int:8')),
+			('spare7',		 b.read('int:8')),
+			('net',			 b.read('int:8')),
+			('command',		 b.read('int:8')),
+		]
+		addcount =  b.read('int:8')
+		fields.append(('addcount', addcount))
+		address = b.readlist('int:' + ','.join(['8'] * addcount))
+		fields.append(('address', address))
+		
+		return cls(source=address)
 
