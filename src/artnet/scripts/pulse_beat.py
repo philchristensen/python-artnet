@@ -1,7 +1,9 @@
-import time
+import time, logging
 
 from artnet import dmx, fixtures, rig
 from artnet.dmx import fades
+
+log = logging.getLogger(__name__)
 
 # set up test fixtures
 r = rig.get_default_rig()

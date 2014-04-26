@@ -1,7 +1,8 @@
 import sys
 import logging
 
-from cement.core import backend, foundation, controller, handler
+from cement.core import foundation, controller, handler
+from cement.utils import misc
 
 logo_ascii = """
            _   _                         _            _
@@ -11,7 +12,7 @@ logo_ascii = """
 |_|   |__/
 """
 
-defaults = backend.defaults('base')
+defaults = misc.init_defaults('base')
 defaults['base']['address'] = '<broadcast>'
 
 log = logging.getLogger(__name__)
@@ -20,22 +21,25 @@ def run(name, config, controller=None):
 	mod = __import__('artnet.scripts', globals(), locals(), [name], -1)
 	try:
 		getattr(mod, name).main(config, controller)
-	except AttributeError:
+	except AttributeError, e:
+		import traceback
+		traceback.print_exc()
 		log.error("Couldn't find lighting script named %r" % name)
 	
 class ArtnetBaseController(controller.CementBaseController):
 	class Meta:
 		label = 'base'
+		interface = controller.IController
 		description = "%s\nBasic artnet protocol support." % logo_ascii
 		
 		arguments = [
 			(['-a', '--address'], dict(action='store', help='Address of an artnet interface.')),
 		]
-
+	
 	@controller.expose(hide=True)
 	def default(self):
 		self.app.args.print_help()
-	
+
 	@controller.expose(help="Send a blackout command to a particular interface.")
 	def blackout(self):
 		from artnet.scripts import all_channels_blackout as blackout
@@ -49,15 +53,16 @@ class ArtnetBaseController(controller.CementBaseController):
 class ArtnetScriptController(controller.CementBaseController):
 	class Meta:
 		label = 'script'
+		stacked_on = 'base'
+		stacked_type = 'nested'
 		description = "Artnet scripting support."
 		arguments = [
-			(['-a', '--address'], dict(action='store', help='Address of an artnet interface.')),
 			(['scriptname'], dict(action='store', help='Name of script to run.')),
 		]
 
 	@controller.expose(help="Run a named lighting script.")
 	def default(self):
-		run(self.app.pargs.scriptname, self.config)
+		run(self.app.pargs.scriptname, self.app.config)
 
 class ArtnetApp(foundation.CementApp):
 	class Meta:
@@ -67,7 +72,9 @@ class ArtnetApp(foundation.CementApp):
 		base_controller = ArtnetBaseController
 
 def main():
+	logging.basicConfig(format="%(asctime)s (%(levelname)s) %(message)s", level='INFO')
 	app = ArtnetApp()
+	handler.register(ArtnetBaseController)
 	handler.register(ArtnetScriptController)
 	
 	try:

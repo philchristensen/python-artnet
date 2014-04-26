@@ -1,3 +1,5 @@
+import logging
+
 import time
 
 from artnet import dmx, fixtures, rig
@@ -6,7 +8,10 @@ from artnet import dmx, fixtures, rig
 r = rig.get_default_rig()
 g = r.groups['all']
 
+log = logging.getLogger(__name__)
+
 def main(config, controller=None):
+	log.info("Running script %s" % __name__)
 	q = controller or dmx.Controller(config.get('base', 'address'), bpm=240, nodaemon=False)
 
 	g.setIntensity(255)

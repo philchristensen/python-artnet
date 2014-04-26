@@ -6,7 +6,8 @@ from artnet import dmx, rig
 
 log = logging.getLogger(__name__)
 
-def main(config):
+def main(config, controller=None):
+	log.info("Running script %s" % __name__)
 	controller = dmx.Controller(config.get('base', 'address'), bpm=60)
 	controller.start()
 	

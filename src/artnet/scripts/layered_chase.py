@@ -1,6 +1,8 @@
-import time
+import time, logging
 
 from artnet import dmx, fixtures, rig
+
+log = logging.getLogger(__name__)
 
 # set up test fixtures
 r = rig.get_default_rig()
@@ -73,6 +75,7 @@ def bouncing_ball(clock, secs=5.0):
 		c = clock()
 
 def main(config, controller=None):
+	log.info("Running script %s" % __name__)
 	q = controller or dmx.Controller(config.get('base', 'address'), bpm=240, nodaemon=False, runout=True)
 	# "base color" red
 	q.add(all_red())
