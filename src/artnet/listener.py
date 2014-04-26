@@ -1,14 +1,11 @@
 import sys, threading, socket, time
 
-def main():
-	if(len(sys.argv) < 2):
-		print "\nUsage:\n\tartnet_listener [address]\n"
-		sys.exit(1)
-	
+def main(config):
+	address = config.get('base', 'address')
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	sock.bind(('', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	l = ArtPollListener(sock, sys.argv[1])
+	l = ArtPollListener(sock, address)
 	l.run()
 	
 def getsock():
@@ -58,6 +55,3 @@ class ArtPollListener(threading.Thread):
 			if(isinstance(p, packet.PollPacket)):
 				r = packet.PollReplyPacket([], source=(ip_address, 6454))
 				l = self.sock.sendto(r.encode(), (p.source[0], packet.ARTNET_PORT))
-
-if(__name__ == '__main__'):
-	main()

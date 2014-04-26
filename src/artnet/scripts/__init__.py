@@ -50,6 +50,11 @@ class ArtnetBaseController(controller.CementBaseController):
 		from artnet.scripts import shell
 		shell.main(self.app.config)
 
+	@controller.expose(help="Run a listener to observe ArtNet traffic (useful for debugging).")
+	def listen(self):
+		from artnet import listener
+		listener.main(self.app.config)
+
 class ArtnetScriptController(controller.CementBaseController):
 	class Meta:
 		label = 'script'
