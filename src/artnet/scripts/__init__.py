@@ -43,12 +43,12 @@ class ArtnetBaseController(controller.CementBaseController):
 	@controller.expose(help="Send a blackout command to a particular interface.")
 	def blackout(self):
 		from artnet.scripts import all_channels_blackout as blackout
-		blackout.main(self.config)
+		blackout.main(self.app.config)
 	
-	@controller.expose(help="This command is not yet implemented.")
+	@controller.expose(help="A custom Python shell with an Artnet controller already running and some sample commands.")
 	def shell(self):
 		from artnet.scripts import shell
-		shell.main(self.config)
+		shell.main(self.app.config)
 
 class ArtnetScriptController(controller.CementBaseController):
 	class Meta:

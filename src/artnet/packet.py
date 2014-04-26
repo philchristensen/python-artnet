@@ -68,7 +68,7 @@ class DmxPacket(ArtNetPacket):
 	
 	def encode(self):
 		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-	        universe_lo, universe_hi = lohi(self.universe)
+		universe_lo, universe_hi = lohi(self.universe)
 		len_lo, len_hi = lohi(512)
 		header = struct.pack('!8sHBBBBHBB', 
 			HEADER, self.opcode, proto_hi, proto_lo,

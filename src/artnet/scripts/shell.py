@@ -36,19 +36,19 @@ def main(config, controller=None):
 		blackout = lambda: _runner('all_channels_blackout'),
 	)
 	
-	try:
-		import readline
-	except ImportError, e:
-		pass
-	else:
-		# We don't have to wrap the following import in a 'try', because
-		# we already know 'readline' was imported successfully.
-		import rlcompleter
-		readline.set_completer(rlcompleter.Completer(local).complete)
-		if(sys.platform == 'darwin'):
-			readline.parse_and_bind ("bind ^I rl_complete")
-		else:
-			readline.parse_and_bind("tab:complete")
+	# try:
+	# 	import readline
+	# except ImportError, e:
+	# 	pass
+	# else:
+	# 	# We don't have to wrap the following import in a 'try', because
+	# 	# we already know 'readline' was imported successfully.
+	# 	import rlcompleter
+	# 	readline.set_completer(rlcompleter.Completer(local).complete)
+	# 	if(sys.platform == 'darwin'):
+	# 		readline.parse_and_bind ("bind ^I rl_complete")
+	# 	else:
+	# 		readline.parse_and_bind("tab:complete")
 	
 	code.interact(local=local)
 
