@@ -75,9 +75,9 @@ class DmxPacket(ArtNetPacket):
 			('protocol_version', 'uintbe:16', PROTOCOL_VERSION),
 			('sequence', 'int:8', self.sequence),
 			('physical', 'int:8', self.physical),
-			('universe', 'uintle:16', self.universe),
+			('universe', 'uintbe:16', self.universe),
 			('length', 'uintbe:16', 512),
-			('frame', 'bytes:512', ''.join([chr(i) for i in self.frame]))
+			('frame', 'bytes:512', ''.join(['\x00' if i is None else chr(i) for i in self.frame]))
 		)
 		
 		format_string = ', '.join('%(format)s=%(name)s' % d for d in [

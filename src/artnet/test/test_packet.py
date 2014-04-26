@@ -77,7 +77,7 @@ class TestPacket(unittest.TestCase):
 	def test_whiteout(self):
 		p = packet.DmxPacket()
 		for i in range(512):
-			p[i] = 255
+			p.frame[i] = 255
 		x = p.encode()
 		self.assertEqual(len(x), len(WHITEOUT_PACKET))
 		self.assertEqual(x, WHITEOUT_PACKET)
@@ -88,3 +88,5 @@ class TestPacket(unittest.TestCase):
 		self.assertEqual(len(x), len(U30_BLACKOUT_PACKET))
 		self.assertEqual(x, U30_BLACKOUT_PACKET)
 	
+if __name__ == '__main__':
+    unittest.main()
