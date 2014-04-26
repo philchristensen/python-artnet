@@ -1,4 +1,4 @@
-import socket, struct, itertools, time
+import socket, struct, itertools, time, logging
 
 import bitstring
 
@@ -6,6 +6,8 @@ HEADER = 'Art-Net\0'
 PROTOCOL_VERSION = 14
 
 ARTNET_PORT = 6454
+
+log = logging.getLogger(__name__)
 
 def lohi(i):
 	low = i & 0x00FF
@@ -67,33 +69,39 @@ class DmxPacket(ArtNetPacket):
 		)
 	
 	def encode(self):
-		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-		universe_lo, universe_hi = lohi(self.universe)
-		len_lo, len_hi = lohi(512)
-		header = struct.pack('!8sHBBBBHBB', 
-			HEADER, self.opcode, proto_hi, proto_lo,
-			self.sequence, self.physical, universe_lo, universe_hi, len_hi, len_lo)
-            	return header + ''.join([struct.pack('!B', 0 if c is None else c) for c in self.frame])
+		data = (
+			('id', 'bytes:8', HEADER),
+			('opcode', 'int:16', self.opcode),
+			('protocol_version', 'uintbe:16', PROTOCOL_VERSION),
+			('sequence', 'int:8', self.sequence),
+			('physical', 'int:8', self.physical),
+			('universe', 'uintle:16', self.universe),
+			('length', 'uintbe:16', 512),
+			('frame', 'bytes:512', ''.join([chr(i) for i in self.frame]))
+		)
+		
+		format_string = ', '.join('%(format)s=%(name)s' % d for d in [
+			dict(name=x[0], format=x[1]) for x in data
+		])
+		data_dict = dict([(y[0],y[2]) for y in data])
+		return bitstring.pack(format_string, **data_dict).tobytes()
 	
 	@classmethod
 	def decode(cls, address, data):
 		b = bitstring.BitStream(bytes=data)
-		fields = [
-			('id',			 b.read('bytes:8')),
-			('opcode',		 b.read('int:16')),
-			('protverhi',	 b.read('int:8')),
-			('protverlo',	 b.read('int:8')),
-			('sequence',	 b.read('int:8')),
-			('physical',	 b.read('int:8')),
-			('subuni',		 b.read('int:8')),
-			('net',			 b.read('int:8')),
-		]
-		length =  b.read('uintbe:16')
-		frame = b.readlist('int:' + ','.join(['8'] * length))
-		d = dict(fields)
+		id = b.read('bytes:8')
+		opcode = b.read('int:16')
+		protocol_version = b.read('uintbe:16')
+		sequence = b.read('int:8')
+		physical = b.read('int:8')
+		universe = b.read('uintle:16')
+		length = b.read('uintbe:16')
+		frame = b.read('bytes:512')
+		
 		from artnet import dmx
-		return cls(frame=dmx.Frame(frame), sequence=d['sequence'], source=address)
-
+		p = cls(frame=dmx.Frame([ord(x) for x in frame]), sequence=sequence, source=address)
+		return p
+		
 class PollPacket(ArtNetPacket):
 	opcode = 0x0020
 	

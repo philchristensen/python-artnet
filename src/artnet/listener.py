@@ -55,3 +55,7 @@ class ArtPollListener(threading.Thread):
 			if(isinstance(p, packet.PollPacket)):
 				r = packet.PollReplyPacket([], source=(ip_address, 6454))
 				l = self.sock.sendto(r.encode(), (p.source[0], packet.ARTNET_PORT))
+				from artnet import dmx
+				r2 = packet.DmxPacket(dmx.Frame([255] * 512))
+				l = self.sock.sendto(r2.encode(), (p.source[0], packet.ARTNET_PORT))
+	
