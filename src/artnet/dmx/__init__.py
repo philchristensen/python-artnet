@@ -1,7 +1,5 @@
 import time, sys, socket, logging, threading, itertools
 
-from artnet import packet
-
 log = logging.getLogger(__name__)
 
 class Frame(list):
@@ -44,7 +42,9 @@ class Controller(threading.Thread):
 		super(Controller, self).__init__()
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		self.sock.bind(('', packet.ARTNET_PORT))
+		
+		from artnet import packet
+		self.sock.bind(('', packet.STANDARD_PORT))
 		
 		self.address = address
 		self.fps = fps
@@ -135,5 +135,6 @@ class Controller(threading.Thread):
 			now = time.time()
 	
 	def send(self, frame):
+		from artnet import packet
 		p = packet.DmxPacket(frame)
-		self.sock.sendto(p.encode(), (self.address, packet.ARTNET_PORT))
+		self.sock.sendto(p.encode(), (self.address, packet.STANDARD_PORT))

@@ -1,61 +1,106 @@
 import socket, struct, itertools, time, logging
 
+from artnet import dmx
+from artnet import OPCODES, NODE_REPORT_CODES, STYLE_CODES
+
 import bitstring
-
-HEADER = 'Art-Net\0'
-PROTOCOL_VERSION = 14
-
-ARTNET_PORT = 6454
 
 log = logging.getLogger(__name__)
 
-def lohi(i):
-	low = i & 0x00FF
-	high = (i & 0xFF00) >> 8
-	return low, high
-
 class ArtNetPacket(object):
 	opcode = None
+	schema = []
 	
-	def __init__(self, source=None, physical=0, universe=0):
-		self.sequence = 0
+	opcode_map = dict()
+	header = 'Art-Net\0'
+	protocol_version = 14
+	
+	@classmethod
+	def register(cls, packet_class):
+		cls.opcode_map[packet_class.opcode] = packet_class
+		return packet_class
+	
+	@classmethod
+	def decode(cls, address, data):
+		[opcode] = struct.unpack('!H', data[8:10])
+		if(opcode not in cls.opcode_map):
+			raise NotImplementedError('%x' % opcode)
+		
+		klass = cls.opcode_map[opcode]
+		b = bitstring.BitStream(bytes=data)
+		fields = dict()
+		for name, fmt in klass.schema:
+			accessor = getattr(klass, 'parse_%s' % name, None)
+			if(callable(accessor)):
+				fields[name] = accessor(b, fmt)
+			else:
+				fields[name] = b.read(fmt)
+		
+		p = klass(address=fields.get('address'))
+		for k,v in fields.items():
+			setattr(p, k, v)
+		
+		return p
+
+	def __init__(self, address=None, sequence=0, physical=0, universe=0):
+		self.address = address
+		self.sequence = sequence
 		self.physical = physical
 		self.universe = universe
-		self.source = source
+		
+		for name, fmt in self.schema:
+			if not(hasattr(self, name)):
+				setattr(self, name, None)
 	
-	def __repr__(self):
-		return '<%(klass)s from %(source)s:%(universe)s/%(physical)s>' % dict(
+	def __str__(self):
+		return '<%(klass)s from %(address)s:%(universe)s/%(physical)s>' % dict(
 			klass    = self.__class__.__name__,
-			source   = self.source,
+			address  = self.address,
 			universe = self.universe,
 			physical = self.physical,
 		)
 	
 	def encode(self):
-		raise NotImplementedError('encode')
+		fields = []
+		for name, fmt in self.schema:
+			accessor =  getattr(self, 'format_%s' % name, 0)
+			if(callable(accessor)):
+				value = accessor()
+			else:
+				value = getattr(self, name)
+			fields.append([name, fmt, value])
+		
+		fmt = ', '.join(['='.join([f,n]) for n,f,v in fields])
+		data = dict([(n,v) for n,f,v in fields])
+		return bitstring.pack(fmt, **data).tobytes()
+	
+@ArtNetPacket.register
+class DmxPacket(ArtNetPacket):
+	opcode = OPCODES['OpDmx']
+	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
+		('sequence', 'int:8'),
+		('physical', 'int:8'),
+		('universe', 'uintbe:16'),
+		('length', 'uintbe:16'),
+		('framedata', 'bytes:512')
+	)
+	
+	def __init__(self, frame=None, **kwargs):
+		super(DmxPacket, self).__init__(**kwargs)
+		self.frame = frame or dmx.Frame()
 	
 	@classmethod
-	def parse(cls, address, data):
-		[opcode] = struct.unpack('!H', data[8:10])
-		for k, packet_class in globals().items():
-			if not(k.endswith('Packet')):
-				continue
-			if(packet_class == cls):
-				continue
-			if not(issubclass(packet_class, cls)):
-				continue
-			if(packet_class.opcode == opcode):
-				return packet_class.decode(address, data)
-		raise NotImplementedError('%r' % opcode)
-
-class DmxPacket(ArtNetPacket):
-	opcode = 0x0050
+	def parse_framedata(cls, b, fmt):
+		return dmx.Frame([ord(x) for x in b.read('bytes:512')])
 	
-	def __init__(self, frame=None, sequence=0, **kwargs):
-		super(DmxPacket, self).__init__(**kwargs)
-		from artnet import dmx
-		self.sequence = sequence
-		self.frame = frame or dmx.Frame()
+	def format_length(self):
+		return len(self.frame)
+	
+	def format_framedata(self):
+		return ''.join([chr(i or 0) for i in self.frame])
 	
 	def __str__(self):
 		return '<DMX(%(sequence)s): %(channels)s>' % dict(
@@ -67,217 +112,128 @@ class DmxPacket(ArtNetPacket):
 				) for address in range(len(self.frame)) if self.frame[address]
 			])
 		)
-	
-	def encode(self):
-		data = (
-			('id', 'bytes:8', HEADER),
-			('opcode', 'int:16', self.opcode),
-			('protocol_version', 'uintbe:16', PROTOCOL_VERSION),
-			('sequence', 'int:8', self.sequence),
-			('physical', 'int:8', self.physical),
-			('universe', 'uintbe:16', self.universe),
-			('length', 'uintbe:16', 512),
-			('frame', 'bytes:512', ''.join(['\x00' if i is None else chr(i) for i in self.frame]))
-		)
 		
-		format_string = ', '.join('%(format)s=%(name)s' % d for d in [
-			dict(name=x[0], format=x[1]) for x in data
-		])
-		data_dict = dict([(y[0],y[2]) for y in data])
-		return bitstring.pack(format_string, **data_dict).tobytes()
-	
-	@classmethod
-	def decode(cls, address, data):
-		b = bitstring.BitStream(bytes=data)
-		id = b.read('bytes:8')
-		opcode = b.read('int:16')
-		protocol_version = b.read('uintbe:16')
-		sequence = b.read('int:8')
-		physical = b.read('int:8')
-		universe = b.read('uintle:16')
-		length = b.read('uintbe:16')
-		frame = b.read('bytes:512')
-		
-		from artnet import dmx
-		p = cls(frame=dmx.Frame([ord(x) for x in frame]), sequence=sequence, source=address)
-		return p
-		
+@ArtNetPacket.register
 class PollPacket(ArtNetPacket):
-	opcode = 0x0020
+	opcode = OPCODES['OpPoll']
+	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
+		('talktome', 'int:8'),
+		('priority', 'int:8')
+	)
 	
-	def __init__(self, ttm=0x02, priority=0, **kwargs):
+	def __init__(self, talktome=0x02, priority=0, **kwargs):
 		super(PollPacket, self).__init__(**kwargs)
-		self.ttm = ttm
+		self.talktome = talktome
 		self.priority = priority
-	
-	def encode(self):
-		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-		return struct.pack('!8sHBBBB', HEADER, self.opcode, proto_hi, proto_lo, self.ttm, self.priority)
-	
-	@classmethod
-	def decode(cls, address, data):
-		parts = struct.unpack(''.join([
-			'!',
-			'8s',  # header
-			'H',   # opcode
-			'BB',  # proto hi,lo
-			'B',   # talk to me
-			'B',   # level
-		]), data)
-		return cls(ttm=parts[4], priority=parts[5], source=address)
 
+@ArtNetPacket.register
 class PollReplyPacket(ArtNetPacket):
-	opcode = 0x0021
+	opcode = OPCODES['OpPollReply']
+	counter = 0
 	
-	def __init__(self, replydata, **kwargs):
-		super(PollReplyPacket, self).__init__(**kwargs)
-		self.replydata = replydata
+	short_name = 'python-artnet'
+	long_name = 'https://github.com/philchristensen/python-artnet.git'
+	esta_manufacturer = 'PA'
+	version = 1
+	universe = 0
+	status1 = 2
+	status2 = bitstring.Bits(bin='00000000')
+	num_ports = 4
+	good_input = bitstring.Bits(bin='00000000')
+	good_output = bitstring.Bits(bin='00000000')
+	style = STYLE_CODES['StNode']
 	
-	def encode(self):
-		ip = [int(x) for x in socket.gethostbyname(socket.gethostname()).split('.')]
-		data = (HEADER, self.opcode, ip[0], ip[1], ip[2], ip[3], ARTNET_PORT,
-			0, 1, # version
-			0, 0, # universe 
-			1, 144, # oem
-			0, 2, 0, # ubea-version, status1, esta man
-			'python-artnet-lib\x00', # short name
-			'python-artnet-lib\x00\x00\x00\x01\x00\x01admin\x00\xff\x92\xff\xbf\xf90{\xdd\x7f>\xfa\x8f\xeb3?o\xc3?wo\xe8\x1f\t\xe8;8\x85\xcbc<\xad\xce\xea\xf6\xb1',
-			'\x00\xe8y\xff\xfb\xe2\xeb[}\xb5\xd3\x99\xf1\xfd\xb37C\xeb\x83-\x01\xf0v\t\xe3\xdeP\x13\x03\xc2\x94\x89Z\x88\x14\x9dHEf\x07\xc8\x0b\x17\x00\x00\x982\x1c\x08T\x0bkW\x17\xb2\x00B\x05\x82\xd3\x00\x00\x00\x94',
-			0, 1, # num ports
-			128, 0, 0, 0, # port types
-			0, 0, 0, 0, # good input
-			128, 0, 0, 0, # good output
-			74, 0, 0, 0, # SWIN
-			0, 0, 0, 0, # SWOUT
-			0, 0, 0, # vid, macro, remote
-			0, 0, 0, # 3 - spare
-			0, #style
-			# MAC hi
-			0x00, 0x14, 0x51, 0x62, 0x81, 0xe0,
-			0
-		)
-		return struct.pack(''.join([
-			'!',
-			'8s',  # 1 header
-			'H',   # 2 opcode
-			'4B',  # 3 ip address
-			'H',   # 4 port
-			'BB',  # 5,6 versioninfo hi,lo
-			'BB',  # 7,8 net, sub
-			'BB',  # 9,10 oem hi,lo
-			'B',   # 11 UBEA version
-			'B',   # 12 Status 1
-			'H',   # 13 ESTA manufacturer code,
-			'18s', # 14 Short Name
-			'64s', # 15 Long Name
-			'64s', # 16 Node Report
-			'BB',  # 17,18 num ports hi,lo
-			'4B',  # 19 port types array
-			'4B',  # 20 good input array
-			'4B',  # 21 good output array
-			'4B',  # 22 sw input address
-			'4B',  # 23 sw output address
-			'B',   # 24 sw video
-			'B',   # 25 sw macro
-			'B',   # 26 sw remote
-			'B',   # 27 not used
-			'B',   # 28 not used
-			'B',   # 29 not used
-			'B',   # 30 style
-			'B',   # 31 mac address hi
-			'B',   # 32 mac address
-			'B',   # 33 mac address
-			'B',   # 34 mac address
-			'B',   # 35 mac address
-			'B',   # 36 mac address lo
-			'B',   # extra
-		]), *data)
-	
-	@classmethod
-	def decode(cls, address, data):
-		if(len(data) == 207):
-			data += '\x00'
-		parts = struct.unpack(''.join([
-			'!',
-			'8s',  # 1 header
-			'H',   # 2 opcode
-			'4B',  # 3 ip address
-			'H',   # 4 port
-			'BB',  # 5,6 versioninfo hi,lo
-			'BB',  # 7,8 net, sub
-			'BB',  # 9,10 oem hi,lo
-			'B',   # 11 UBEA version
-			'B',   # 12 Status 1
-			'H',   # 13 ESTA manufacturer code,
-			'18s', # 14 Short Name
-			'64s', # 15 Long Name
-			'64s', # 16 Node Report
-			'BB',  # 17,18 num ports hi,lo
-			'4B',  # 19 port types array
-			'4B',  # 20 good input array
-			'4B',  # 21 good output array
-			'4B',  # 22 sw input address
-			'4B',  # 23 sw output address
-			'B',   # 24 sw video
-			'B',   # 25 sw macro
-			'B',   # 26 sw remote
-			'B',   # 27 not used
-			'B',   # 28 not used
-			'B',   # 29 not used
-			'B',   # 30 style
-			'B',   # 31 mac address hi
-			'B',   # 32 mac address
-			'B',   # 33 mac address
-			'B',   # 34 mac address
-			'B',   # 35 mac address
-			'B',   # 36 mac address lo
-			'B', #extra
-			#'4B',  # 37 bind ip
-			# 'B',   # 38 bind index
-			# 'B',   # 39 status 2
-			# '26B', # 40 filler
-		]), data)
-		return cls(parts, source=address)
-
-class TodRequestPacket(ArtNetPacket):
-	opcode = 0x0080
+	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
+		('ip_address', 'int:8,int:8,int:8,int:8'),
+		('port', 'int:16'),
+		('version_info', 'uintbe:16'),
+		('net_switch', 'int:8'),
+		('sub_switch', 'int:8'),
+		('oem', 'uintbe:16'),
+		('ubea_version', 'int:8'),
+		('status1', 'int:8'),
+		('esta_manufacturer', 'uintle:16'),
+		('short_name', 'bin:18'),
+		('long_name', 'bin:64'),
+		('node_report', 'bin:64'),
+		('num_ports', 'uintbe:16'),
+		('port_types', 'int:8,int:8,int:8,int:8'),
+		('good_input', 'int:8,int:8,int:8,int:8'),
+		('good_output', 'int:8,int:8,int:8,int:8'),
+		('switch_in', 'int:8'),
+		('switch_out', 'int:8'),
+		('switch_video', 'int:8'),
+		('switch_macro', 'int:8'),
+		('switch_remote', 'int:8'),
+		('spare1', 'int:8'),
+		('spare2', 'int:8'),
+		('spare3', 'int:8'),
+		('style', 'int:8'),
+		('mac_hi', 'int:8'),
+		('mac', 'int:8,int:8,int:8,int:8'),
+		('mac_lo', 'int:8'),
+		('bind_ip', 'int:8,int:8,int:8,int:8'),
+		('bind_index', 'int:8'),
+		('status2', 'int:8'),
+		('filler', 'bytes')
+	)
 	
 	def __init__(self, **kwargs):
-		super(TodRequestPacket, self).__init__(**kwargs)
+		super(PollReplyPacket, self).__init__(**kwargs)
+		PollReplyPacket.counter += 1
 	
-	def encode(self):
-		proto_lo, proto_hi = lohi(PROTOCOL_VERSION)
-		return ''.join([
-			struct.pack('!8sHBB', HEADER, self.opcode, proto_hi, proto_lo),
-			''.join([struct.pack('!B', 0) for x in range(7)]),
-			''.join([struct.pack('!B', x) for x in [0, 0, 0, 0, 1, 1]]),
-			''.join([struct.pack('!B', 0) for x in range(31)])
-		])
+	def format_ip_address(self):
+		address = socket.gethostbyname(socket.gethostname())
+		return ''.join([chr(int(x)) for x in address.split('.')])
 	
 	@classmethod
-	def decode(cls, address, data):
-		b = bitstring.BitStream(bytes=data)
-		fields = [
-			('id',			 b.read('bytes:8')),
-			('opcode',		 b.read('int:16')),
-			('protverhi',	 b.read('int:8')),
-			('protverlo',	 b.read('int:8')),
-			('filler1',		 b.read('int:8')),
-			('filler2',		 b.read('int:8')),
-			('spare1',		 b.read('int:8')),
-			('spare2',		 b.read('int:8')),
-			('spare3',		 b.read('int:8')),
-			('spare4',		 b.read('int:8')),
-			('spare5',		 b.read('int:8')),
-			('spare6',		 b.read('int:8')),
-			('spare7',		 b.read('int:8')),
-			('net',			 b.read('int:8')),
-			('command',		 b.read('int:8')),
-		]
-		addcount =  b.read('int:8')
-		fields.append(('addcount', addcount))
-		address = b.readlist('int:' + ','.join(['8'] * addcount))
-		fields.append(('address', address))
+	def parse_ip_address(cls, b, fmt):
+		address = b.readlist(fmt)
+		return '.'.join([ord(x) for x in address])
 		
-		return cls(source=address)
+	def format_node_report(self):
+		return "#0001 [%s] Power On Tests successful" % PollReplyPacket.counter
+	
+	def format_port_types(self):
+		return '\0\0\0\0'
+	
+	def format_good_input(self):
+		return '\0\0\0\0'
+	
+	def format_good_output(self):
+		return '\0\0\0\0'
+	
+	def format_mac(self):
+		return '\0\0\0\0'
+	
+	def format_bind_ip(self):
+		return '\0\0\0\0'
+	
 
+@ArtNetPacket.register
+class TodRequestPacket(ArtNetPacket):
+	opcode = OPCODES['OpTodRequest']
+	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
+		('filler1', 'int:8'),
+		('filler2', 'int:8'),
+		('spare1', 'int:8'),
+		('spare2', 'int:8'),
+		('spare3', 'int:8'),
+		('spare4', 'int:8'),
+		('spare5', 'int:8'),
+		('spare6', 'int:8'),
+		('spare7', 'int:8'),
+		('net', 'int:8'),
+		('command', 'int:8'),
+		('addcount', 'int:8'),
+		('address', 'int:8')
+	)

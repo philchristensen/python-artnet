@@ -1,20 +1,19 @@
-import sys, threading, socket, time
+import sys, threading, socket, time, logging
+
+from artnet import packet
+import artnet
+
+log = logging.getLogger(__name__)
 
 def main(config):
 	address = config.get('base', 'address')
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	sock.bind(('', 6454))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	l = ArtPollListener(sock, address)
+	l = ArtnetThread(sock, address)
 	l.run()
-	
-def getsock():
-	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('', 6454))
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	return sock
 
-class ArtPollListener(threading.Thread):
+class ArtnetThread(threading.Thread):
 	def __init__(self, sock, broadcast_address):
 		threading.Thread.__init__(self)
 		self.running = False
@@ -25,23 +24,17 @@ class ArtPollListener(threading.Thread):
 		self.running = False
 	
 	def run(self):
-		from artnet import packet
-		
 		ip_address = socket.gethostbyname(socket.gethostname())
-		last_poll = time.time()
-		
-		def _poll():
-			p = packet.PollPacket(source=(ip_address, 6454))
-			l = self.sock.sendto(p.encode(), (self.broadcast_address, packet.ARTNET_PORT))
+		last_poll = 0
 		
 		self.sock.settimeout(0.0)
 		self.running = True
 		
-		_poll()
 		while(self.running):
 			if(time.time() - last_poll >= 4):
 				last_poll = time.time()
-				_poll()
+				p = packet.PollPacket(address=ip_address)
+				self.sock.sendto(p.encode(), (self.broadcast_address, artnet.STANDARD_PORT))
 			
 			try:
 				data, addr = self.sock.recvfrom(1024)
@@ -49,13 +42,14 @@ class ArtPollListener(threading.Thread):
 				time.sleep(0.1)
 				continue
 			
-			p = packet.ArtNetPacket.parse(addr, data)
-			print 'got packet: %s' % p
+			p = packet.ArtNetPacket.decode(addr, data)
+			log.debug("recv: %s" % p)
 			
 			if(isinstance(p, packet.PollPacket)):
-				r = packet.PollReplyPacket([], source=(ip_address, 6454))
-				l = self.sock.sendto(r.encode(), (p.source[0], packet.ARTNET_PORT))
+				r = packet.PollReplyPacket(address=ip_address)
+				log.debug("send: %s" % r)
+				self.sock.sendto(r.encode(), (p.address, artnet.STANDARD_PORT))
 				from artnet import dmx
 				r2 = packet.DmxPacket(dmx.Frame([255] * 512))
-				l = self.sock.sendto(r2.encode(), (p.source[0], packet.ARTNET_PORT))
-	
+				log.debug("send: %s" % r2)
+				self.sock.sendto(r2.encode(), (self.broadcast_address, artnet.STANDARD_PORT))
