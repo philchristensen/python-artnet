@@ -13,7 +13,11 @@ log = logging.getLogger(__name__)
 
 class ArtNetPacket(object):
 	opcode = None
-	schema = []
+	base_schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16')
+	)
 	
 	opcode_map = dict()
 	header = 'Art-Net\0'
@@ -33,7 +37,7 @@ class ArtNetPacket(object):
 		klass = cls.opcode_map[opcode]
 		b = bitstring.BitStream(bytes=data)
 		fields = dict()
-		for name, fmt in klass.schema:
+		for name, fmt in cls.base_schema + klass.schema:
 			accessor = getattr(klass, 'parse_%s' % name, None)
 			if(callable(accessor)):
 				fields[name] = accessor(b, fmt)
@@ -66,7 +70,7 @@ class ArtNetPacket(object):
 	
 	def encode(self):
 		fields = []
-		for name, fmt in self.schema:
+		for name, fmt in self.base_schema + self.schema:
 			accessor =  getattr(self, 'format_%s' % name, '\0')
 			if(callable(accessor)):
 				value = accessor()
@@ -77,14 +81,11 @@ class ArtNetPacket(object):
 		fmt = ', '.join(['='.join([f,n]) for n,f,v in fields])
 		data = dict([(n,v) for n,f,v in fields])
 		return bitstring.pack(fmt, **data).tobytes()
-	
+
 @ArtNetPacket.register
 class DmxPacket(ArtNetPacket):
 	opcode = OPCODES['OpDmx']
 	schema = (
-		('header', 'bytes:8'),
-		('opcode', 'int:16'),
-		('protocol_version', 'uintbe:16'),
 		('sequence', 'int:8'),
 		('physical', 'int:8'),
 		('universe', 'uintbe:16'),
@@ -121,9 +122,6 @@ class DmxPacket(ArtNetPacket):
 class PollPacket(ArtNetPacket):
 	opcode = OPCODES['OpPoll']
 	schema = (
-		('header', 'bytes:8'),
-		('opcode', 'int:16'),
-		('protocol_version', 'uintbe:16'),
 		('talktome', 'int:8'),
 		('priority', 'int:8')
 	)
@@ -158,9 +156,6 @@ class PollReplyPacket(ArtNetPacket):
 	mac_address = uuid.getnode()
 	
 	schema = (
-		('header', 'bytes:8'),
-		('opcode', 'int:16'),
-		('protocol_version', 'uintbe:16'),
 		('ip_address', 'bytes:4'),
 		('port', 'int:16'),
 		('version_info', 'uintbe:16'),
@@ -235,9 +230,6 @@ class PollReplyPacket(ArtNetPacket):
 class TodRequestPacket(ArtNetPacket):
 	opcode = OPCODES['OpTodRequest']
 	schema = (
-		('header', 'bytes:8'),
-		('opcode', 'int:16'),
-		('protocol_version', 'uintbe:16'),
 		('filler1', 'int:8'),
 		('filler2', 'int:8'),
 		('spare1', 'int:8'),
