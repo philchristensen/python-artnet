@@ -6,7 +6,7 @@ import logging
 import json
 
 import artnet
-from artnet import packet, STANDARD_PORT, OPCODES
+from artnet import packet, STANDARD_PORT, OPCODES, STYLE_CODES
 
 log = logging.getLogger(__name__)
 
@@ -55,9 +55,7 @@ class Poller(threading.Thread):
 		if(p is None):
 			return
 		
-		if(p.opcode != OPCODES['OpDmx']):
-			log.info("recv: %s" % p)
-		
+		log.debug("recv: %s" % p)
 		if(p.opcode == OPCODES['OpPoll']):
 			self.send_poll_reply(p)
 	
@@ -71,7 +69,11 @@ class Poller(threading.Thread):
 	
 	def send_poll_reply(self, poll):
 		ip_address = socket.gethostbyname(socket.gethostname())
+		style = STYLE_CODES['StNode'] if isinstance(self, Poller) else STYLE_CODES['StController']
+		
 		r = packet.PollReplyPacket(address=self.broadcast_address)
+		r.style = style
+		
+		log.debug("send: %s" % r)
 		self.sock.sendto(r.encode(), (r.address, STANDARD_PORT))
-		log.info("send: %s" % r)
 		
