@@ -18,8 +18,8 @@ TOD_REQUEST = ''.join([
 	"".join(["\x00"] * 7),   # Spare1-7 (Int8)
 	"\x00", # Net (Int8)
 	"\x00", # Command (Int8)
-	"\x01", # AddCount (Int8)
-	"\x01", ''.join(["\x00"] * 31), # Address[31] (Int8)
+	"\x00", # AddCount (Int8)
+	# "\x01", ''.join(["\x00"] * 31), # Address[31] (Int8)
 ])
 
 BLACKOUT_PACKET = ''.join([

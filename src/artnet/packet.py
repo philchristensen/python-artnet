@@ -1,7 +1,11 @@
-import socket, struct, itertools, time, logging
+import socket
+import struct
+import time
+import logging
+import uuid
 
 from artnet import dmx
-from artnet import OPCODES, NODE_REPORT_CODES, STYLE_CODES
+from artnet import OPCODES, NODE_REPORT_CODES, STYLE_CODES, STANDARD_PORT
 
 import bitstring
 
@@ -36,7 +40,7 @@ class ArtNetPacket(object):
 			else:
 				fields[name] = b.read(fmt)
 		
-		p = klass(address=fields.get('address'))
+		p = klass(address=address)
 		for k,v in fields.items():
 			setattr(p, k, v)
 		
@@ -50,7 +54,7 @@ class ArtNetPacket(object):
 		
 		for name, fmt in self.schema:
 			if not(hasattr(self, name)):
-				setattr(self, name, None)
+				setattr(self, name, 0)
 	
 	def __str__(self):
 		return '<%(klass)s from %(address)s:%(universe)s/%(physical)s>' % dict(
@@ -63,7 +67,7 @@ class ArtNetPacket(object):
 	def encode(self):
 		fields = []
 		for name, fmt in self.schema:
-			accessor =  getattr(self, 'format_%s' % name, 0)
+			accessor =  getattr(self, 'format_%s' % name, '\0')
 			if(callable(accessor)):
 				value = accessor()
 			else:
@@ -134,23 +138,30 @@ class PollReplyPacket(ArtNetPacket):
 	opcode = OPCODES['OpPollReply']
 	counter = 0
 	
+	port = STANDARD_PORT
+	
 	short_name = 'python-artnet'
 	long_name = 'https://github.com/philchristensen/python-artnet.git'
+	style = STYLE_CODES['StController']
 	esta_manufacturer = 'PA'
 	version = 1
 	universe = 0
 	status1 = 2
-	status2 = bitstring.Bits(bin='00000000')
-	num_ports = 4
-	good_input = bitstring.Bits(bin='00000000')
-	good_output = bitstring.Bits(bin='00000000')
-	style = STYLE_CODES['StNode']
+	status2 = bitstring.Bits('0b0111').int
+	
+	num_ports = 0
+	port_types = '\0\0\0\0'
+	good_input = '\0\0\0\0'
+	good_output = '\0\0\0\0'
+	
+	bind_ip = '\0\0\0\0'
+	mac_address = uuid.getnode()
 	
 	schema = (
 		('header', 'bytes:8'),
 		('opcode', 'int:16'),
 		('protocol_version', 'uintbe:16'),
-		('ip_address', 'int:8,int:8,int:8,int:8'),
+		('ip_address', 'bytes:4'),
 		('port', 'int:16'),
 		('version_info', 'uintbe:16'),
 		('net_switch', 'int:8'),
@@ -158,14 +169,14 @@ class PollReplyPacket(ArtNetPacket):
 		('oem', 'uintbe:16'),
 		('ubea_version', 'int:8'),
 		('status1', 'int:8'),
-		('esta_manufacturer', 'uintle:16'),
-		('short_name', 'bin:18'),
-		('long_name', 'bin:64'),
-		('node_report', 'bin:64'),
+		('esta_manufacturer', 'bytes:2'),
+		('short_name', 'bytes:18'),
+		('long_name', 'bytes:64'),
+		('node_report', 'bytes:64'),
 		('num_ports', 'uintbe:16'),
-		('port_types', 'int:8,int:8,int:8,int:8'),
-		('good_input', 'int:8,int:8,int:8,int:8'),
-		('good_output', 'int:8,int:8,int:8,int:8'),
+		('port_types', 'bytes:4'),
+		('good_input', 'bytes:4'),
+		('good_output', 'bytes:4'),
 		('switch_in', 'int:8'),
 		('switch_out', 'int:8'),
 		('switch_video', 'int:8'),
@@ -175,10 +186,8 @@ class PollReplyPacket(ArtNetPacket):
 		('spare2', 'int:8'),
 		('spare3', 'int:8'),
 		('style', 'int:8'),
-		('mac_hi', 'int:8'),
-		('mac', 'int:8,int:8,int:8,int:8'),
-		('mac_lo', 'int:8'),
-		('bind_ip', 'int:8,int:8,int:8,int:8'),
+		('mac_address', 'uintle:48'),
+		('bind_ip', 'bytes:4'),
 		('bind_index', 'int:8'),
 		('status2', 'int:8'),
 		('filler', 'bytes')
@@ -194,27 +203,33 @@ class PollReplyPacket(ArtNetPacket):
 	
 	@classmethod
 	def parse_ip_address(cls, b, fmt):
-		address = b.readlist(fmt)
-		return '.'.join([ord(x) for x in address])
+		address = b.read(fmt)
+		return '.'.join([str(ord(x)) for x in address])
 		
+	def format_short_name(self):
+		return self.short_name[0:18].ljust(18)
+	
+	@classmethod
+	def parse_short_name(cls, b, fmt):
+		short_name = b.read(fmt)
+		return short_name.strip()
+	
+	def format_long_name(self):
+		return self.long_name[0:64].ljust(64)
+	
+	@classmethod
+	def parse_long_name(cls, b, fmt):
+		long_name = b.read(fmt)
+		return long_name.strip()
+	
 	def format_node_report(self):
-		return "#0001 [%s] Power On Tests successful" % PollReplyPacket.counter
+		node_report = "#0001 [%s] Power On Tests successful" % PollReplyPacket.counter
+		return node_report[0:64].ljust(64)
 	
-	def format_port_types(self):
-		return '\0\0\0\0'
-	
-	def format_good_input(self):
-		return '\0\0\0\0'
-	
-	def format_good_output(self):
-		return '\0\0\0\0'
-	
-	def format_mac(self):
-		return '\0\0\0\0'
-	
-	def format_bind_ip(self):
-		return '\0\0\0\0'
-	
+	@classmethod
+	def parse_node_report(cls, b, fmt):
+		node_report = b.read(fmt)
+		return node_report.strip()	
 
 @ArtNetPacket.register
 class TodRequestPacket(ArtNetPacket):
@@ -235,5 +250,5 @@ class TodRequestPacket(ArtNetPacket):
 		('net', 'int:8'),
 		('command', 'int:8'),
 		('addcount', 'int:8'),
-		('address', 'int:8')
+		# ('addr', 'int:8')
 	)

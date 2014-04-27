@@ -33,7 +33,7 @@ class ArtnetThread(threading.Thread):
 		while(self.running):
 			if(time.time() - last_poll >= 4):
 				last_poll = time.time()
-				p = packet.PollPacket(address=ip_address)
+				p = packet.PollPacket(address=(ip_address, artnet.STANDARD_PORT))
 				self.sock.sendto(p.encode(), (self.broadcast_address, artnet.STANDARD_PORT))
 			
 			try:
@@ -43,13 +43,9 @@ class ArtnetThread(threading.Thread):
 				continue
 			
 			p = packet.ArtNetPacket.decode(addr, data)
-			log.debug("recv: %s" % p)
+			log.info("recv: %s" % p)
 			
 			if(isinstance(p, packet.PollPacket)):
-				r = packet.PollReplyPacket(address=ip_address)
-				log.debug("send: %s" % r)
-				self.sock.sendto(r.encode(), (p.address, artnet.STANDARD_PORT))
-				from artnet import dmx
-				r2 = packet.DmxPacket(dmx.Frame([255] * 512))
-				log.debug("send: %s" % r2)
-				self.sock.sendto(r2.encode(), (self.broadcast_address, artnet.STANDARD_PORT))
+				r = packet.PollReplyPacket(address=(ip_address, artnet.STANDARD_PORT))
+				self.sock.sendto(r.encode(), (self.broadcast_address, artnet.STANDARD_PORT))
+				log.info("send: %s" % r)
