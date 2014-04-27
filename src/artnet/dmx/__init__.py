@@ -1,5 +1,7 @@
 import time, sys, socket, logging, threading, itertools
 
+from artnet import STANDARD_PORT, OPCODES, packet
+
 log = logging.getLogger(__name__)
 
 class Frame(list):
@@ -43,8 +45,11 @@ class Controller(threading.Thread):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		
-		from artnet import packet
-		self.sock.bind(('', packet.STANDARD_PORT))
+		self.sock.bind(('', STANDARD_PORT))
+		self.sock.settimeout(0.0)
+		
+		self.broadcast_address = '<broadcast>'
+		self.last_poll = 0
 		
 		self.address = address
 		self.fps = fps
@@ -121,7 +126,9 @@ class Controller(threading.Thread):
 			
 			# do anything potentially framerate-affecting here
 			self.iterate()
-			self.send(self.last_frame)
+			self.handle_artnet()
+			
+			self.send_dmx(self.last_frame)
 			if(self.runout and len(self.generators) == 0):
 				self.running = False
 			# end framerate-affecting code
@@ -134,7 +141,41 @@ class Controller(threading.Thread):
 				log.warning("Frame rate loss; generators took %sms too long" % round(abs(excess * 1000)))
 			now = time.time()
 	
-	def send(self, frame):
-		from artnet import packet
+	def read_artnet(self):
+		try:
+			data, addr = self.sock.recvfrom(1024)
+		except socket.error, e:
+			time.sleep(0.1)
+			return None
+		
+		return packet.ArtNetPacket.decode(addr, data)
+	
+	def handle_artnet(self):
+		if(time.time() - self.last_poll >= 4):
+			self.last_poll = time.time()
+			self.send_poll()
+		
+		p = self.read_artnet()
+		if(p is None):
+			return
+		
+		if(p.opcode != OPCODES['OpDmx']):
+			log.info("recv: %s" % p)
+		
+		if(p.opcode == OPCODES['OpPoll']):
+			self.send_poll_reply(p)
+	
+	def send_dmx(self, frame):
 		p = packet.DmxPacket(frame)
-		self.sock.sendto(p.encode(), (self.address, packet.STANDARD_PORT))
+		self.sock.sendto(p.encode(), (self.address, STANDARD_PORT))
+	
+	def send_poll(self):
+		p = packet.PollPacket(address=self.broadcast_address)
+		self.sock.sendto(p.encode(), (p.address, STANDARD_PORT))
+	
+	def send_poll_reply(self, poll):
+		ip_address = socket.gethostbyname(socket.gethostname())
+		r = packet.PollReplyPacket(address=self.broadcast_address)
+		self.sock.sendto(r.encode(), (r.address, STANDARD_PORT))
+		log.info("send: %s" % r)
+		

@@ -4,7 +4,6 @@ import time
 import logging
 import uuid
 
-from artnet import dmx
 from artnet import OPCODES, NODE_REPORT_CODES, STYLE_CODES, STANDARD_PORT
 
 import bitstring
@@ -94,10 +93,12 @@ class DmxPacket(ArtNetPacket):
 	
 	def __init__(self, frame=None, **kwargs):
 		super(DmxPacket, self).__init__(**kwargs)
+		from artnet import dmx
 		self.frame = frame or dmx.Frame()
 	
 	@classmethod
 	def parse_framedata(cls, b, fmt):
+		from artnet import dmx
 		return dmx.Frame([ord(x) for x in b.read('bytes:512')])
 	
 	def format_length(self):
