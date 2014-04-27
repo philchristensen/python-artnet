@@ -1,7 +1,12 @@
-import sys, threading, socket, time, logging
+import sys
+import threading
+import socket
+import time
+import logging
+import json
 
-from artnet import packet
 import artnet
+from artnet import packet
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +48,9 @@ class ArtnetThread(threading.Thread):
 				continue
 			
 			p = packet.ArtNetPacket.decode(addr, data)
-			log.info("recv: %s" % p)
+			
+			if(p.opcode != artnet.OPCODES['OpDmx']):
+				log.info("recv: %s" % p)
 			
 			if(isinstance(p, packet.PollPacket)):
 				r = packet.PollReplyPacket(address=(ip_address, artnet.STANDARD_PORT))

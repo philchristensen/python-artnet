@@ -13,11 +13,7 @@ log = logging.getLogger(__name__)
 
 class ArtNetPacket(object):
 	opcode = None
-	base_schema = (
-		('header', 'bytes:8'),
-		('opcode', 'int:16'),
-		('protocol_version', 'uintbe:16')
-	)
+	schema = ()
 	
 	opcode_map = dict()
 	header = 'Art-Net\0'
@@ -37,7 +33,7 @@ class ArtNetPacket(object):
 		klass = cls.opcode_map[opcode]
 		b = bitstring.BitStream(bytes=data)
 		fields = dict()
-		for name, fmt in cls.base_schema + klass.schema:
+		for name, fmt in klass.schema:
 			accessor = getattr(klass, 'parse_%s' % name, None)
 			if(callable(accessor)):
 				fields[name] = accessor(b, fmt)
@@ -70,7 +66,7 @@ class ArtNetPacket(object):
 	
 	def encode(self):
 		fields = []
-		for name, fmt in self.base_schema + self.schema:
+		for name, fmt in self.schema:
 			accessor =  getattr(self, 'format_%s' % name, '\0')
 			if(callable(accessor)):
 				value = accessor()
@@ -86,6 +82,9 @@ class ArtNetPacket(object):
 class DmxPacket(ArtNetPacket):
 	opcode = OPCODES['OpDmx']
 	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
 		('sequence', 'int:8'),
 		('physical', 'int:8'),
 		('universe', 'uintbe:16'),
@@ -122,6 +121,9 @@ class DmxPacket(ArtNetPacket):
 class PollPacket(ArtNetPacket):
 	opcode = OPCODES['OpPoll']
 	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
 		('talktome', 'int:8'),
 		('priority', 'int:8')
 	)
@@ -156,9 +158,11 @@ class PollReplyPacket(ArtNetPacket):
 	mac_address = uuid.getnode()
 	
 	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
 		('ip_address', 'bytes:4'),
 		('port', 'int:16'),
-		('version_info', 'uintbe:16'),
+		('version', 'uintbe:16'),
 		('net_switch', 'int:8'),
 		('sub_switch', 'int:8'),
 		('oem', 'uintbe:16'),
@@ -194,12 +198,13 @@ class PollReplyPacket(ArtNetPacket):
 	
 	def format_ip_address(self):
 		address = socket.gethostbyname(socket.gethostname())
-		return ''.join([chr(int(x)) for x in address.split('.')])
+		return bitstring.pack('uint:8, uint:8, uint:8, uint:8', *[int(x) for x in address.split('.')]).bytes
 	
 	@classmethod
 	def parse_ip_address(cls, b, fmt):
-		address = b.read(fmt)
-		return '.'.join([str(ord(x)) for x in address])
+		b = bitstring.BitStream(bytes=b.read(fmt))
+		address = b.readlist(','.join(['uint:8'] * 4))
+		return '.'.join([str(x) for x in address])
 		
 	def format_short_name(self):
 		return self.short_name[0:18].ljust(18)
@@ -230,6 +235,9 @@ class PollReplyPacket(ArtNetPacket):
 class TodRequestPacket(ArtNetPacket):
 	opcode = OPCODES['OpTodRequest']
 	schema = (
+		('header', 'bytes:8'),
+		('opcode', 'int:16'),
+		('protocol_version', 'uintbe:16'),
 		('filler1', 'int:8'),
 		('filler2', 'int:8'),
 		('spare1', 'int:8'),
