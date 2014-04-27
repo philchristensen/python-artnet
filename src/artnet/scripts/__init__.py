@@ -52,7 +52,7 @@ class ArtnetBaseController(controller.CementBaseController):
 
 	@controller.expose(help="Run a listener to observe ArtNet traffic (useful for debugging).")
 	def listen(self):
-		from artnet import listener
+		from artnet.scripts import listener
 		listener.main(self.app.config)
 
 class ArtnetScriptController(controller.CementBaseController):

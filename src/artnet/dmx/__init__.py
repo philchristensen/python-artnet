@@ -1,6 +1,6 @@
 import time, sys, socket, logging, threading, itertools
 
-from artnet import STANDARD_PORT, OPCODES, packet
+from artnet import STANDARD_PORT, OPCODES, packet, daemon
 
 log = logging.getLogger(__name__)
 
@@ -39,19 +39,10 @@ class AutoCycler(object):
 		self.enabled = False
 		return False
 
-class Controller(threading.Thread):
-	def __init__(self, address, fps=40.0, bpm=240.0, measure=4, nodaemon=False, runout=False):
-		super(Controller, self).__init__()
-		self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		
-		self.sock.bind(('', STANDARD_PORT))
-		self.sock.settimeout(0.0)
-		
-		self.broadcast_address = '<broadcast>'
-		self.last_poll = 0
-		
-		self.address = address
+class Controller(daemon.Poller):
+	def __init__(self, address, nodaemon=False, runout=False, fps=40.0, bpm=240.0, measure=4):
+		super(Controller, self).__init__(address, nodaemon=nodaemon, runout=runout)
+
 		self.fps = fps
 		self.bpm = bpm
 		self.measure = measure
@@ -59,10 +50,7 @@ class Controller(threading.Thread):
 		self.last_frame = Frame()
 		self.generators = []
 		self.access_lock = threading.Lock()
-		self.nodaemon = nodaemon
-		self.daemon = not nodaemon
 		self.runout = runout
-		self.running = True
 		self.frameindex = 0
 		self.beatindex = 0
 		self.beat = 0
@@ -140,42 +128,3 @@ class Controller(threading.Thread):
 			else:
 				log.warning("Frame rate loss; generators took %sms too long" % round(abs(excess * 1000)))
 			now = time.time()
-	
-	def read_artnet(self):
-		try:
-			data, addr = self.sock.recvfrom(1024)
-		except socket.error, e:
-			time.sleep(0.1)
-			return None
-		
-		return packet.ArtNetPacket.decode(addr, data)
-	
-	def handle_artnet(self):
-		if(time.time() - self.last_poll >= 4):
-			self.last_poll = time.time()
-			self.send_poll()
-		
-		p = self.read_artnet()
-		if(p is None):
-			return
-		
-		if(p.opcode != OPCODES['OpDmx']):
-			log.info("recv: %s" % p)
-		
-		if(p.opcode == OPCODES['OpPoll']):
-			self.send_poll_reply(p)
-	
-	def send_dmx(self, frame):
-		p = packet.DmxPacket(frame)
-		self.sock.sendto(p.encode(), (self.address, STANDARD_PORT))
-	
-	def send_poll(self):
-		p = packet.PollPacket(address=self.broadcast_address)
-		self.sock.sendto(p.encode(), (p.address, STANDARD_PORT))
-	
-	def send_poll_reply(self, poll):
-		ip_address = socket.gethostbyname(socket.gethostname())
-		r = packet.PollReplyPacket(address=self.broadcast_address)
-		self.sock.sendto(r.encode(), (r.address, STANDARD_PORT))
-		log.info("send: %s" % r)
-		
