@@ -29,6 +29,7 @@ def run(name, config, controller=None):
 class ArtnetBaseController(controller.CementBaseController):
 	class Meta:
 		label = 'base'
+		usage = 'artnet <command> [options]'
 		interface = controller.IController
 		description = "%s\nBasic artnet protocol support." % logo_ascii
 		
@@ -58,14 +59,15 @@ class ArtnetBaseController(controller.CementBaseController):
 class ArtnetScriptController(controller.CementBaseController):
 	class Meta:
 		label = 'script'
+		usage = 'artnet script [options ...] <scriptname>'
 		stacked_on = 'base'
 		stacked_type = 'nested'
-		description = "Artnet scripting support."
+		description = "Run a standalone script from the python-artnet distribution."
 		arguments = [
 			(['scriptname'], dict(action='store', help='Name of script to run.')),
 		]
 
-	@controller.expose(help="Run a named lighting script.")
+	@controller.expose(help="Run a named lighting script.", hide=True)
 	def default(self):
 		run(self.app.pargs.scriptname, self.app.config)
 
