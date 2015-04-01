@@ -86,7 +86,7 @@ class DmxPacket(ArtNetPacket):
 		('protocol_version', 'uintbe:16'),
 		('sequence', 'int:8'),
 		('physical', 'int:8'),
-		('universe', 'uintbe:16'),
+		('universe', 'uintle:16'),
 		('length', 'uintbe:16'),
 		('framedata', 'bytes:512')
 	)

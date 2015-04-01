@@ -59,8 +59,8 @@ class Poller(threading.Thread):
 		if(p.opcode == OPCODES['OpPoll']):
 			self.send_poll_reply(p)
 	
-	def send_dmx(self, frame):
-		p = packet.DmxPacket(frame)
+	def send_dmx(self, frame, universe=0):
+		p = packet.DmxPacket(frame, universe=universe)
 		self.sock.sendto(p.encode(), (self.address, STANDARD_PORT))
 	
 	def send_poll(self):
